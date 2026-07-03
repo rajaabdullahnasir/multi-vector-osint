@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% load static ov_icons %}
+
+{% block title %}{{ analysis.original_filename }} — Image OSINT{% endblock %}
+
+{% block page_heading %}Analysis results{% endblock %}
+
+{% block content %}
+
+{% url 'image_osint:export_json' analysis.pk as export_url %}
+
+{% url 'image_osint:home' as back_url %}
+
+{% url 'image_osint:delete' analysis.pk as delete_url %}
+
+{% include "partials/report_bar.html" with report_label="Image OSINT" report_title=analysis.original_filename report_meta=analysis.created_at export_url=export_url back_url=back_url delete_url=delete_url delete_confirm="Delete this investigation?" %}
+
+
+
+{% if analysis.status == 'failed' %}
+
+<div class="ov-alert ov-alert--danger">{{ analysis.error_message }}</div>
+
+{% else %}
+
+
+
+<div class="ov-report-meta">
+
+  <div class="ov-report-meta__item">
+
+    <div class="ov-report-meta__label">Format</div>
+
+    <div class="ov-report-meta__value">{{ analysis.detected_format|upper }}</div>
+
+  </div>
+
+  <div class="ov-report-meta__item">
+
+    <div class="ov-report-meta__label">Dimensions</div>
+
+    <div class="ov-report-meta__value">{{ analysis.width }}×{{ analysis.height }}</div>
+
+  </div>
+
+  <div class="ov-report-meta__item">
+
+    <div class="ov-report-meta__label">File size</div>
+
+    <div class="ov-report-meta__value">{{ analysis.file_size_bytes|filesizeformat }}</div>
+
+  </div>
+
+  <div class="ov-report-meta__item">
+
+    <div class="ov-report-meta__label">EXIF present</div>
+
+    <div class="ov-report-meta__value">
+
+      {% if analysis.has_exif %}
+
+      <span class="ov-status ov-status--ok">Yes</span>
+
+      {% else %}
+
+      <span class="ov-status ov-status--neutral">No</span>
+
+      {% endif %}
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+{% if risk_flags %}
+
+<div class="ov-panel" style="margin-bottom: var(--ov-space-6);">
+
+  <h3 class="ov-panel__title ov-panel__title-row">{% ov_icon "shield-alert" size="sm" %}<span>Risk flags</span></h3>
+
+  <ul class="ov-text-secondary" style="margin: var(--ov-space-4) 0 0; padding-left: 1.1rem; line-height: 1.7; color: var(--ov-color-warning);">
+
+    {% for flag in risk_flags %}
+
+    <li>{{ flag }}</li>
+
+    {% endfor %}
+
+  </ul>
+
+</div>
+
+{% endif %}
+
+
+
+<div class="ov-image-detail-grid">
+
+  {% if analysis.image %}
+
+  <div class="ov-panel">
+
+    <h3 class="ov-panel__title ov-panel__title-row">{% ov_icon "image" size="sm" %}<span>Preview</span></h3>
+
+    <div class="ov-image-preview">
+
+      <img class="ov-image-preview__img" src="{{ analysis.image.url }}" alt="Analyzed image: {{ analysis.original_filename }}" />
+
+    </div>
+
+  </div>
+
+  {% endif %}
+
+
+
+  <div class="ov-panel">
+
+    <h3 class="ov-panel__title ov-panel__title-row">{% ov_icon "hash" size="sm" %}<span>Fingerprints</span></h3>
+
+    <div class="ov-fingerprint-list">
+
+      <div class="ov-fingerprint-item">
+
+        <div class="ov-fingerprint-item__head">
+
+          <p class="ov-fingerprint-item__label">Perceptual hash (aHash 8×8)</p>
+
+          <button type="button" class="ov-btn ov-btn--ghost ov-btn--sm ov-btn--icon" data-copy-value="{{ fingerprint.perceptual_hash_hex }}" title="Copy hash">
+
+            {% ov_icon "copy" size="sm" %}
+
+            <span data-copy-label>Copy</span>
+
+          </button>
+
+        </div>
+
+        <p class="ov-fingerprint-item__value">{{ fingerprint.perceptual_hash_hex }}</p>
+
+      </div>
+
+      <div class="ov-fingerprint-item">
+
+        <div class="ov-fingerprint-item__head">
+
+          <p class="ov-fingerprint-item__label">SHA-256</p>
+
+          <button type="button" class="ov-btn ov-btn--ghost ov-btn--sm ov-btn--icon" data-copy-value="{{ fingerprint.sha256_file }}" title="Copy SHA-256">
+
+            {% ov_icon "copy" size="sm" %}
+
+            <span data-copy-label>Copy</span>
+
+          </button>
+
+        </div>
+
+        <p class="ov-fingerprint-item__value">{{ fingerprint.sha256_file }}</p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+{% if gps.latitude %}
+
+<div class="ov-panel" style="margin-bottom: var(--ov-space-6);">
+
+  <h3 class="ov-panel__title ov-panel__title-row">{% ov_icon "map-pin" size="sm" %}<span>GPS location</span></h3>
+
+  <p class="ov-text-secondary" style="margin-top: var(--ov-space-4);">
+
+    {{ gps.latitude }}, {{ gps.longitude }}
+
+    {% if gps.altitude_meters %} · Altitude: {{ gps.altitude_meters }} m{% endif %}
+
+  </p>
+
+  <a class="ov-btn ov-btn--primary ov-btn--sm ov-btn--icon" style="margin-top: var(--ov-space-4);" href="{{ gps.google_maps_url }}" target="_blank" rel="noopener noreferrer">
+
+    {% ov_icon "external-link" size="sm" %}
+
+    <span>Open in Google Maps</span>
+
+  </a>
+
+</div>
+
+{% endif %}
+
+
+
+{% for section_name, section_fields in metadata_sections %}
+
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);" data-module="image">
+
+  <h3 class="ov-panel__title ov-panel__title-row">{% ov_icon "info" size="sm" %}<span>{{ section_name }}</span></h3>
+
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+
+    <table class="ov-table">
+
+      <tbody>
+
+        {% for label, val in section_fields.items %}
+
+        <tr>
+
+          <th style="width: 36%; font-weight: 500;">{{ label }}</th>
+
+          <td style="word-break: break-word;">{{ val }}</td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+</div>
+
+{% endfor %}
+
+
+
+<div class="ov-panel" style="margin-bottom: var(--ov-space-6);">
+
+  <h3 class="ov-panel__title ov-panel__title-row">{% ov_icon "search" size="sm" %}<span>Reverse image search</span></h3>
+
+  <div class="ov-alert ov-alert--info" style="margin: var(--ov-space-4) 0;">{{ reverse_notice }}</div>
+
+  <div class="ov-table-wrap" style="border: none;">
+
+    <table class="ov-table">
+
+      <thead>
+
+        <tr>
+
+          <th>Provider</th>
+
+          <th>Method</th>
+
+          <th>Action</th>
+
+        </tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for link in reverse_search %}
+
+        <tr>
+
+          <td>{{ link.provider }}</td>
+
+          <td class="ov-caption">{{ link.method }}</td>
+
+          <td>
+
+            <a class="ov-link ov-link--icon" href="{{ link.url }}" target="_blank" rel="noopener noreferrer">{% ov_icon "external-link" size="sm" %}<span>Open</span></a>
+
+            <p class="ov-caption" style="margin: var(--ov-space-2) 0 0;">{{ link.notes }}</p>
+
+          </td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+</div>
+
+
+
+{% if exif.raw_tags %}
+
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);">
+
+  <h3 class="ov-panel__title ov-panel__title-row">{% ov_icon "hash" size="sm" %}<span>Raw tags ({{ exif.tag_count }})</span></h3>
+
+  <pre class="ov-mono-block" style="max-height: 320px; margin-top: var(--ov-space-4);">{% for k, v in exif.raw_tags.items %}{{ k }}: {{ v }}
+
+{% endfor %}</pre>
+
+</div>
+
+{% endif %}
+
+
+
+{% if exif.warnings %}
+
+<div class="ov-alert ov-alert--warning">
+
+  {% for w in exif.warnings %}{{ w }}{% if not forloop.last %} · {% endif %}{% endfor %}
+
+</div>
+
+{% endif %}
+
+
+
+{% endif %}
+
+{% endblock %}
+
+
+
+{% block extra_js %}
+
+<script src="{% static 'image_osint/image_detail.js' %}" defer></script>
+
+{% endblock %}
+
+

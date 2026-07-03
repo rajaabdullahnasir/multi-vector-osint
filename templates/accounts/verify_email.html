@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Email verification — OSINT Vector{% endblock %}
+{% block body %}
+<div class="ov-app" style="display: grid; place-items: center; min-height: 100vh; padding: var(--ov-space-8);">
+  <div class="ov-card" style="max-width: 480px; width: 100%;">
+    {% if success %}
+    <div class="ov-alert ov-alert--success">Email verified. You can now log in.</div>
+    <a class="ov-btn ov-btn--primary" href="{% url 'accounts:login' %}">Go to login</a>
+    {% else %}
+    <div class="ov-alert ov-alert--danger">{{ error }}</div>
+    {% if show_resend %}
+    <p class="ov-text-secondary ov-mt-6">
+      Request a fresh link (this invalidates older emails).
+    </p>
+    <a class="ov-btn ov-btn--secondary" href="{% url 'accounts:resend_verification' %}">Resend verification email</a>
+    {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

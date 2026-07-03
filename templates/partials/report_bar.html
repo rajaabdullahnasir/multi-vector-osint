@@ -1,0 +1,32 @@
+{% load ov_icons %}
+<div class="ov-report-bar">
+  <div>
+    <p class="ov-overline">{{ report_label|default:"Report" }}</p>
+    <h2 class="ov-report-bar__title">{{ report_title }}</h2>
+    {% if report_meta %}<p class="ov-caption">{{ report_meta }}</p>{% endif %}
+  </div>
+  <div class="ov-report-bar__actions">
+    {% if export_url %}
+    <a class="ov-btn ov-btn--secondary ov-btn--sm ov-btn--icon" href="{{ export_url }}">
+      {% ov_icon "download" size="sm" %}
+      <span>Export</span>
+    </a>
+    {% endif %}
+    {% if back_url %}
+    <a class="ov-btn ov-btn--ghost ov-btn--sm ov-btn--icon" href="{{ back_url }}">
+      {% ov_icon "arrow-left" size="sm" %}
+      <span>Back</span>
+    </a>
+    {% endif %}
+    {% if delete_url %}
+    <form method="post" action="{{ delete_url }}" onsubmit="return confirm('{{ delete_confirm|default:"Delete this record?" }}');">
+      {% csrf_token %}
+      <button type="submit" class="ov-btn ov-btn--danger ov-btn--sm ov-btn--icon">
+        {% ov_icon "trash" size="sm" %}
+        <span>Delete</span>
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+

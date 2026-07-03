@@ -1,0 +1,118 @@
+{% load static ov_icons %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}OSINT Vector{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'theme.css' %}" />
+    {% block extra_css %}{% endblock %}
+  </head>
+  <body class="ov-body ov-app">
+    {% block body %}
+    <div class="ov-shell">
+      {% if user.is_authenticated %}
+      <aside class="ov-sidebar" aria-label="Application navigation">
+        <div class="ov-sidebar__brand">
+          <a href="{% url 'core:dashboard' %}" class="ov-sidebar__brand-link">
+            <div class="ov-sidebar__logo" aria-hidden="true">{% ov_icon "brand" size="md" %}</div>
+            <div>
+              <div class="ov-sidebar__title">{{ app_name }}</div>
+              <div class="ov-sidebar__subtitle">Investigation workspace</div>
+            </div>
+          </a>
+        </div>
+
+        <nav class="ov-sidebar__nav" aria-label="Main">
+          <p class="ov-nav__section">Workspace</p>
+          <ul class="ov-nav">
+            <li class="ov-nav__item">
+              <a href="{% url 'core:dashboard' %}"
+                 class="ov-nav__link {% if active_module == 'dashboard' %}ov-nav__link--active{% endif %}">
+                {% ov_icon "dashboard" size="md" %}
+                <span>Dashboard</span>
+              </a>
+            </li>
+          </ul>
+
+          <p class="ov-nav__section">Modules</p>
+          <ul class="ov-nav">
+            {% for mod in module_nav %}
+            <li class="ov-nav__item">
+              {% if mod.available and mod.href %}
+              <a href="{{ mod.href }}"
+                 class="ov-nav__link {% if active_module == mod.slug %}ov-nav__link--active{% endif %}">
+                {% ov_icon mod.icon size="md" %}
+                <span>{{ mod.name }}</span>
+              </a>
+              {% else %}
+              <span class="ov-nav__link ov-nav__link--disabled">
+                {% ov_icon mod.icon size="md" %}
+                <span>{{ mod.name }}</span>
+              </span>
+              {% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </nav>
+
+        <div class="ov-sidebar__footer">
+          <div class="ov-sidebar__user">
+            <div class="ov-avatar" aria-hidden="true">
+              {{ user.first_name|slice:":1"|upper }}{{ user.email|slice:":1"|upper }}
+            </div>
+            <div class="ov-sidebar__user-meta">
+              <div class="ov-sidebar__user-name">{{ user.get_full_name|default:user.email }}</div>
+              <div class="ov-sidebar__user-email">{{ user.email }}</div>
+            </div>
+          </div>
+          <form method="post" action="{% url 'accounts:logout' %}">
+            {% csrf_token %}
+            <button type="submit" class="ov-btn ov-btn--ghost ov-btn--sm ov-btn--icon ov-sidebar__logout">
+              {% ov_icon "log-out" size="sm" %}
+              <span>Sign out</span>
+            </button>
+          </form>
+        </div>
+      </aside>
+      {% endif %}
+
+      <div class="ov-main">
+        {% if user.is_authenticated %}
+        <header class="ov-header">
+          <div>
+            {% block header_eyebrow %}{% endblock %}
+            <h1 class="ov-heading-1{% if active_module_icon %} ov-heading-1--with-icon{% endif %}">
+              {% if active_module_icon %}{% ov_icon active_module_icon size="lg" %}{% endif %}
+              <span>{% block page_heading %}Dashboard{% endblock %}</span>
+            </h1>
+            {% block page_lead %}{% endblock %}
+          </div>
+          <div class="ov-flex ov-gap-2">
+            {% block header_actions %}{% endblock %}
+          </div>
+        </header>
+        {% endif %}
+
+        <main class="ov-content">
+          {% if messages %}
+          <div class="ov-messages">
+            {% for message in messages %}
+            <div class="ov-alert ov-alert--{% if message.tags == 'error' %}danger{% elif message.tags == 'warning' %}warning{% elif message.tags == 'success' %}success{% else %}info{% endif %}">
+              {{ message }}
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% block content %}{% endblock %}
+        </main>
+      </div>
+    </div>
+    {% endblock %}
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>
+

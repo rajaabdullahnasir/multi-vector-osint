@@ -1,0 +1,608 @@
+{% extends "base.html" %}
+
+{% load static ov_icons %}
+
+{% block title %}Dashboard — OSINT Vector{% endblock %}
+
+{% block page_heading %}Dashboard{% endblock %}
+
+{% block page_lead %}<p class="ov-page-lead">Overview of your investigations, module usage, and risk signals.</p>{% endblock %}
+
+{% block content %}
+
+
+
+<div class="ov-dash-stats" aria-label="Summary statistics">
+
+  {% for stat in stats %}
+
+  <article class="ov-stat-card">
+    <div class="ov-stat-card__top">
+      <p class="ov-stat-card__label">{{ stat.label }}</p>
+      <div class="ov-stat-card__icon" aria-hidden="true">{% ov_icon stat.icon size="md" %}</div>
+    </div>
+    <p class="ov-stat-card__value">{{ stat.value }}</p>
+    <p class="ov-stat-card__hint">{{ stat.hint }}</p>
+  </article>
+
+  {% endfor %}
+
+</div>
+
+
+
+{% if total_investigations > 0 %}
+
+<div class="ov-dash-charts" aria-label="Analytics charts">
+
+  <article class="ov-chart-card ov-chart-card--wide">
+
+    <div class="ov-chart-card__head">
+
+      <h2 class="ov-chart-card__title ov-heading-1--with-icon" style="font-size: var(--ov-text-sm);">{% ov_icon "activity" size="sm" %}<span>Investigation activity</span></h2>
+
+      <p class="ov-chart-card__lead">Daily saved lookups across all modules (last 14 days)</p>
+
+    </div>
+
+    <div class="ov-chart-card__canvas">
+
+      <canvas id="chart-activity" role="img" aria-label="Line chart of daily investigation activity"></canvas>
+
+    </div>
+
+  </article>
+
+
+
+  <article class="ov-chart-card">
+
+    <div class="ov-chart-card__head">
+
+      <h2 class="ov-chart-card__title ov-heading-1--with-icon" style="font-size: var(--ov-text-sm);">{% ov_icon "bar-chart" size="sm" %}<span>Module usage</span></h2>
+
+      <p class="ov-chart-card__lead">Total saved results per module</p>
+
+    </div>
+
+    <div class="ov-chart-card__canvas">
+
+      <canvas id="chart-modules" role="img" aria-label="Bar chart of module usage"></canvas>
+
+    </div>
+
+  </article>
+
+
+
+  <article class="ov-chart-card">
+
+    <div class="ov-chart-card__head">
+
+      <h2 class="ov-chart-card__title ov-heading-1--with-icon" style="font-size: var(--ov-text-sm);">{% ov_icon "link" size="sm" %}<span>URL risk breakdown</span></h2>
+
+      <p class="ov-chart-card__lead">Classification of scanned URLs</p>
+
+    </div>
+
+    <div class="ov-chart-card__canvas">
+
+      <canvas id="chart-url-risk" role="img" aria-label="Doughnut chart of URL risk levels"></canvas>
+
+    </div>
+
+  </article>
+
+
+
+  <article class="ov-chart-card ov-chart-card--wide">
+
+    <div class="ov-chart-card__head">
+
+      <h2 class="ov-chart-card__title ov-heading-1--with-icon" style="font-size: var(--ov-text-sm);">{% ov_icon "shield-alert" size="sm" %}<span>Exposure signals</span></h2>
+
+      <p class="ov-chart-card__lead">Pwned credentials and high-risk URL findings</p>
+
+    </div>
+
+    <div class="ov-chart-card__canvas">
+
+      <canvas id="chart-exposure" role="img" aria-label="Horizontal bar chart of exposure signals"></canvas>
+
+    </div>
+
+  </article>
+
+</div>
+
+{{ chart_data|json_script:"dashboard-chart-data" }}
+
+{% else %}
+
+<div class="ov-panel" style="margin-bottom: var(--ov-space-10);">
+
+  <p class="ov-panel__lead">No investigations yet. Open a module below to run your first lookup — charts will populate as you work.</p>
+
+</div>
+
+{% endif %}
+
+
+
+<section class="ov-section" style="margin-top: 0;">
+
+  <div class="ov-section__head">
+
+    <h2 class="ov-section__title">Modules</h2>
+
+  </div>
+
+  <div class="ov-dash-tiles" aria-label="OSINT modules">
+
+    {% for tile in module_tiles %}
+
+      {% if tile.available and tile.href %}
+
+      <a href="{{ tile.href }}" class="ov-tile">
+
+        <div class="ov-tile__top">
+
+          <span class="ov-tile__badge" aria-hidden="true">{% ov_icon tile.icon size="md" %}</span>
+
+          <span class="ov-tile__count">{{ tile.count }} saved</span>
+
+        </div>
+
+        <p class="ov-tile__name">{{ tile.name }}</p>
+
+        <p class="ov-tile__desc">{{ tile.description }}</p>
+
+        <span class="ov-tile__action">{% ov_icon "chevron-right" size="sm" %}<span>Open module</span></span>
+
+      </a>
+
+      {% else %}
+
+      <div class="ov-tile ov-tile--disabled">
+
+        <div class="ov-tile__top">
+
+          <span class="ov-tile__badge" aria-hidden="true">{% ov_icon tile.icon size="md" %}</span>
+
+        </div>
+
+        <p class="ov-tile__name">{{ tile.name }}</p>
+
+        <p class="ov-tile__desc">Not available</p>
+
+      </div>
+
+      {% endif %}
+
+    {% endfor %}
+
+  </div>
+
+</section>
+
+
+
+{% if has_recent %}
+
+<section class="ov-section">
+
+  <div class="ov-section__head">
+
+    <h2 class="ov-section__title">Recent work</h2>
+
+  </div>
+
+
+
+  {% if recent_images %}
+
+  <div class="ov-table-wrap" style="margin-bottom: var(--ov-space-6);">
+
+    <table class="ov-table">
+
+      <thead>
+
+        <tr><th colspan="4">Image OSINT</th></tr>
+
+        <tr><th>File</th><th>EXIF</th><th>Date</th><th></th></tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for item in recent_images %}
+
+        <tr>
+
+          <td>{{ item.original_filename }}</td>
+
+          <td>
+
+            {% if item.has_exif %}
+
+            <span class="ov-status ov-status--ok">Present</span>
+
+            {% else %}
+
+            <span class="ov-status ov-status--neutral">None</span>
+
+            {% endif %}
+
+          </td>
+
+          <td class="ov-caption">{{ item.created_at }}</td>
+
+          <td><a class="ov-link ov-link--icon" href="{% url 'image_osint:detail' item.pk %}">{% ov_icon "eye" size="sm" %}<span>View</span></a></td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  {% endif %}
+
+
+
+  {% if recent_domains %}
+
+  <div class="ov-table-wrap" style="margin-bottom: var(--ov-space-6);">
+
+    <table class="ov-table">
+
+      <thead>
+
+        <tr><th colspan="4">WHOIS & DNS</th></tr>
+
+        <tr><th>Domain</th><th>Registrar</th><th>Date</th><th></th></tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for item in recent_domains %}
+
+        <tr>
+
+          <td class="ov-table__mono">{{ item.domain }}</td>
+
+          <td>{{ item.registrar|default:"—" }}</td>
+
+          <td class="ov-caption">{{ item.created_at }}</td>
+
+          <td><a class="ov-link ov-link--icon" href="{% url 'whois_osint:detail' item.pk %}">{% ov_icon "eye" size="sm" %}<span>View</span></a></td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  {% endif %}
+
+
+
+  {% if recent_subdomain_scans %}
+
+  <div class="ov-table-wrap" style="margin-bottom: var(--ov-space-6);">
+
+    <table class="ov-table">
+
+      <thead>
+
+        <tr><th colspan="4">Subdomain Finder</th></tr>
+
+        <tr><th>Domain</th><th>Found</th><th>Date</th><th></th></tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for item in recent_subdomain_scans %}
+
+        <tr>
+
+          <td class="ov-table__mono">{{ item.domain }}</td>
+
+          <td>{{ item.subdomain_count }}</td>
+
+          <td class="ov-caption">{{ item.created_at }}</td>
+
+          <td><a class="ov-link ov-link--icon" href="{% url 'subdomain_osint:detail' item.pk %}">{% ov_icon "eye" size="sm" %}<span>View</span></a></td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  {% endif %}
+
+
+
+  {% if recent_email_checks %}
+
+  <div class="ov-table-wrap" style="margin-bottom: var(--ov-space-6);">
+
+    <table class="ov-table">
+
+      <thead>
+
+        <tr><th colspan="4">Email Breach</th></tr>
+
+        <tr><th>Email</th><th>Status</th><th>Date</th><th></th></tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for item in recent_email_checks %}
+
+        <tr>
+
+          <td class="ov-table__mono">{{ item.email }}</td>
+
+          <td>
+
+            {% if item.is_pwned %}
+
+            <span class="ov-status ov-status--bad">Pwned ({{ item.breach_count }})</span>
+
+            {% else %}
+
+            <span class="ov-status ov-status--ok">Clear</span>
+
+            {% endif %}
+
+          </td>
+
+          <td class="ov-caption">{{ item.created_at }}</td>
+
+          <td><a class="ov-link ov-link--icon" href="{% url 'email_breach_osint:detail' item.pk %}">{% ov_icon "eye" size="sm" %}<span>View</span></a></td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  {% endif %}
+
+
+
+  {% if recent_password_checks %}
+
+  <div class="ov-table-wrap" style="margin-bottom: var(--ov-space-6);">
+
+    <table class="ov-table">
+
+      <thead>
+
+        <tr><th colspan="4">Password Breach</th></tr>
+
+        <tr><th>SHA-1</th><th>Status</th><th>Date</th><th></th></tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for item in recent_password_checks %}
+
+        <tr>
+
+          <td class="ov-table__mono">{{ item.masked_sha1 }}</td>
+
+          <td>
+
+            {% if item.is_pwned %}
+
+            <span class="ov-status ov-status--bad">Exposed ({{ item.exposure_count }})</span>
+
+            {% else %}
+
+            <span class="ov-status ov-status--ok">Not found</span>
+
+            {% endif %}
+
+          </td>
+
+          <td class="ov-caption">{{ item.created_at }}</td>
+
+          <td><a class="ov-link ov-link--icon" href="{% url 'password_breach_osint:detail' item.pk %}">{% ov_icon "eye" size="sm" %}<span>View</span></a></td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  {% endif %}
+
+
+
+  {% if recent_username_lookups %}
+
+  <div class="ov-table-wrap" style="margin-bottom: var(--ov-space-6);">
+
+    <table class="ov-table">
+
+      <thead>
+
+        <tr><th colspan="4">Username OSINT</th></tr>
+
+        <tr><th>Username</th><th>Found</th><th>Date</th><th></th></tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for item in recent_username_lookups %}
+
+        <tr>
+
+          <td class="ov-table__mono">{{ item.username }}</td>
+
+          <td>{{ item.found_count }}/{{ item.checked_count }}</td>
+
+          <td class="ov-caption">{{ item.created_at }}</td>
+
+          <td><a class="ov-link ov-link--icon" href="{% url 'username_osint:detail' item.pk %}">{% ov_icon "eye" size="sm" %}<span>View</span></a></td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  {% endif %}
+
+
+
+  {% if recent_url_checks %}
+
+  <div class="ov-table-wrap" style="margin-bottom: var(--ov-space-6);">
+
+    <table class="ov-table">
+
+      <thead>
+
+        <tr><th colspan="4">URL Risk</th></tr>
+
+        <tr><th>URL</th><th>Risk</th><th>Date</th><th></th></tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for item in recent_url_checks %}
+
+        <tr>
+
+          <td class="ov-table__mono">{{ item.url|truncatechars:48 }}</td>
+
+          <td>
+
+            {% if item.risk_level == "dangerous" %}
+
+            <span class="ov-status ov-status--bad">Dangerous</span>
+
+            {% elif item.risk_level == "suspicious" %}
+
+            <span class="ov-status ov-status--warn">Suspicious</span>
+
+            {% else %}
+
+            <span class="ov-status ov-status--ok">Safe</span>
+
+            {% endif %}
+
+          </td>
+
+          <td class="ov-caption">{{ item.created_at }}</td>
+
+          <td><a class="ov-link ov-link--icon" href="{% url 'url_risk_osint:detail' item.pk %}">{% ov_icon "eye" size="sm" %}<span>View</span></a></td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  {% endif %}
+
+
+
+  {% if recent_hash_jobs %}
+
+  <div class="ov-table-wrap">
+
+    <table class="ov-table">
+
+      <thead>
+
+        <tr><th colspan="4">Password Hasher</th></tr>
+
+        <tr><th>Mode</th><th>Result</th><th>Date</th><th></th></tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for item in recent_hash_jobs %}
+
+        <tr>
+
+          <td>{{ item.get_mode_display }}</td>
+
+          <td>{{ item.summary_label }}</td>
+
+          <td class="ov-caption">{{ item.created_at }}</td>
+
+          <td><a class="ov-link ov-link--icon" href="{% url 'password_hasher_osint:detail' item.pk %}">{% ov_icon "eye" size="sm" %}<span>View</span></a></td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  {% endif %}
+
+</section>
+
+{% endif %}
+
+{% endblock %}
+
+
+
+{% block extra_js %}
+
+{% if total_investigations > 0 %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+
+<script src="{% static 'dashboard.js' %}"></script>
+
+{% endif %}
+
+{% endblock %}
+
+

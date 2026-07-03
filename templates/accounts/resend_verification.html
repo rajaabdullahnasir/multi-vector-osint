@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Resend verification — OSINT Vector{% endblock %}
+{% block body %}
+<div class="ov-app" style="display: grid; place-items: center; min-height: 100vh; padding: var(--ov-space-8);">
+  <div class="ov-card" style="width: 100%; max-width: 420px;">
+    <h1 class="ov-heading-2">Resend verification</h1>
+    <p class="ov-text-secondary">Enter your email to get a new verification button and link.</p>
+    <form method="post" class="ov-mt-6">
+      {% csrf_token %}
+      <div class="ov-field">
+        <label class="ov-field__label" for="id_email">{{ form.email.label }}</label>
+        {{ form.email }}
+        {% if form.email.errors %}
+        <p class="ov-caption" style="color: var(--ov-color-danger);">{{ form.email.errors.0 }}</p>
+        {% endif %}
+      </div>
+      <button type="submit" class="ov-btn ov-btn--primary" style="width: 100%;">Send new link</button>
+    </form>
+    <p class="ov-caption ov-mt-6">
+      <a class="ov-link" href="{% url 'accounts:login' %}">Back to login</a>
+    </p>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Password breach report{% endblock %}
+{% block page_heading %}Password breach report{% endblock %}
+{% block content %}
+{% url 'password_breach_osint:export_json' check.pk as export_url %}
+{% url 'password_breach_osint:home' as back_url %}
+{% url 'password_breach_osint:delete' check.pk as delete_url %}
+{% include "partials/report_bar.html" with report_label="Password breach" report_title=check.masked_sha1 report_meta=check.updated_at export_url=export_url back_url=back_url delete_url=delete_url delete_confirm="Delete this check?" %}
+
+{% if check.status == 'failed' %}
+<div class="ov-alert ov-alert--danger">{{ check.error_message }}</div>
+{% else %}
+
+<div class="ov-report-meta">
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Breach status</div>
+    <div class="ov-report-meta__value">
+      {% if check.is_pwned %}
+      <span class="ov-status ov-status--bad">Pwned</span>
+      {% else %}
+      <span class="ov-status ov-status--ok">Not found</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Exposure count</div>
+    <div class="ov-report-meta__value">{{ check.exposure_count|default:"0" }}</div>
+  </div>
+</div>
+
+{% if k_anonymity_note %}
+<div class="ov-alert ov-alert--safe">{{ k_anonymity_note }}</div>
+{% endif %}
+
+{% if risk_flags %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-6);">
+  <h3 class="ov-panel__title">Risk flags</h3>
+  <ul class="ov-text-secondary" style="margin: var(--ov-space-4) 0 0; padding-left: 1.1rem; line-height: 1.7; color: var(--ov-color-warning);">
+    {% for flag in risk_flags %}
+    <li>{{ flag }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% for section_name, section_fields in metadata_sections %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);" data-module="password-breach">
+  <h3 class="ov-panel__title">{{ section_name }}</h3>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <tbody>
+        {% for label, val in section_fields.items %}
+        <tr>
+          <th style="width: 36%; font-weight: 500;">{{ label }}</th>
+          <td style="word-break: break-word;">{{ val }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% endif %}
+{% endblock %}

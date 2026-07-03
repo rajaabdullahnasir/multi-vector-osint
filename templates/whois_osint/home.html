@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load static ov_icons %}
+{% block title %}WHOIS Lookup — OSINT Vector{% endblock %}
+{% block page_heading %}WHOIS &amp; domain intelligence{% endblock %}
+{% block page_lead %}<p class="ov-page-lead">Passive WHOIS (TCP port 43) and public DNS records — no port scanning.</p>{% endblock %}
+{% block content %}
+<div class="ov-workspace">
+  <section class="ov-panel" data-module="whois">
+    <header class="ov-panel__head">
+      <h2 class="ov-panel__title">Domain lookup</h2>
+      <p class="ov-panel__lead">Enter a domain to query registry WHOIS and resolve DNS records.</p>
+    </header>
+    <form
+      method="post"
+      action="{% url 'whois_osint:lookup' %}"
+      data-whois-lookup-form
+      data-lookup-url="{% url 'whois_osint:lookup' %}"
+      novalidate
+    >
+      {% csrf_token %}
+      <div class="ov-field">
+        <label class="ov-field__label" for="id_domain">{{ form.domain.label }}</label>
+        {{ form.domain }}
+        {% if form.domain.errors %}
+        <p class="ov-caption js-domain-error" style="color: var(--ov-color-danger);">{{ form.domain.errors.0 }}</p>
+        {% else %}
+        <p class="ov-caption">{{ form.domain.help_text }}</p>
+        {% endif %}
+      </div>
+      <button type="submit" class="ov-btn ov-btn--primary ov-btn--icon" id="whois-submit-btn">
+        {% ov_icon "globe" size="sm" %}
+        <span>Run WHOIS lookup</span>
+      </button>
+    </form>
+  </section>
+</div>
+
+<div id="whois-loader" class="ov-loader-overlay" aria-hidden="true">
+  <div class="ov-loader-card">
+    <div class="ov-spinner" aria-hidden="true"></div>
+    <p class="ov-loader__title">Running WHOIS lookup</p>
+    <p class="ov-loader__domain js-loader-domain"></p>
+    <p class="ov-loader__status js-loader-status">Starting…</p>
+    <div class="ov-progress"><div class="ov-progress__bar ov-progress__bar--indeterminate"></div></div>
+  </div>
+</div>
+
+{% if lookups %}
+<section class="ov-section">
+  <div class="ov-section__head">
+    <h2 class="ov-section__title">Recent lookups</h2>
+  </div>
+  <div class="ov-table-wrap" id="whois-lookups-table">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>Domain</th>
+          <th>Registrar</th>
+          <th>Expires</th>
+          <th>DNS</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in lookups %}
+        <tr>
+          <td class="ov-table__mono">{{ row.domain }}</td>
+          <td>{{ row.registrar|default:"—" }}</td>
+          <td class="ov-caption">{{ row.expiry_date|default:"—" }}</td>
+          <td>{{ row.dns_record_count }} records</td>
+          <td>
+            {% if row.status == 'completed' %}
+            <span class="ov-status ov-status--ok">Done</span>
+            {% elif row.status == 'failed' %}
+            <span class="ov-status ov-status--bad">Failed</span>
+            {% else %}
+            <span class="ov-status ov-status--neutral">Pending</span>
+            {% endif %}
+          </td>
+          <td><a class="ov-link ov-link--icon" href="{% url 'whois_osint:detail' row.pk %}">{% ov_icon "eye" size="sm" %}<span>Open</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<script src="{% static 'whois_osint/whois_lookup.js' %}"></script>
+{% endblock %}

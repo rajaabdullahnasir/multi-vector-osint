@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% load static ov_icons %}
+{% block title %}Username OSINT — OSINT Vector{% endblock %}
+{% block page_heading %}Username OSINT{% endblock %}
+{% block page_lead %}<p class="ov-page-lead">Passive profile enumeration across major platforms (Sherlock-style HTTP checks).</p>{% endblock %}
+{% block content %}
+<div class="ov-workspace">
+  <section class="ov-panel" data-module="username">
+    <header class="ov-panel__head">
+      <h2 class="ov-panel__title">Search username</h2>
+      <p class="ov-panel__lead">Public profile URLs only — no login or scraping APIs. Verify results manually.</p>
+    </header>
+    <form
+      method="post"
+      action="{% url 'username_osint:scan' %}"
+      data-username-scan-form
+      data-scan-url="{% url 'username_osint:scan' %}"
+      novalidate
+    >
+      {% csrf_token %}
+      <div class="ov-field">
+        <label class="ov-field__label" for="id_username">{{ form.username.label }}</label>
+        {{ form.username }}
+        {% if form.username.errors %}
+        <p class="ov-caption js-username-error" style="color: var(--ov-color-danger);">{{ form.username.errors.0 }}</p>
+        {% else %}
+        <p class="ov-caption">{{ form.username.help_text }}</p>
+        {% endif %}
+      </div>
+      <button type="submit" class="ov-btn ov-btn--primary ov-btn--icon" id="username-scan-submit-btn">
+        {% ov_icon "users" size="sm" %}
+        <span>Run username scan</span>
+      </button>
+    </form>
+  </section>
+</div>
+
+<div id="username-scan-loader" class="ov-loader-overlay" aria-hidden="true">
+  <div class="ov-loader-card">
+    <div class="ov-spinner" aria-hidden="true"></div>
+    <p class="ov-loader__title">Scanning platforms</p>
+    <p class="ov-loader__email js-loader-username"></p>
+    <p class="ov-loader__status js-loader-status">Starting…</p>
+    <div class="ov-progress"><div class="ov-progress__bar ov-progress__bar--indeterminate"></div></div>
+  </div>
+</div>
+
+{% if lookups %}
+<section class="ov-section">
+  <div class="ov-section__head">
+    <h2 class="ov-section__title">Recent scans</h2>
+  </div>
+  <div class="ov-table-wrap">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Found</th>
+          <th>Checked</th>
+          <th>Status</th>
+          <th>Updated</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in lookups %}
+        <tr>
+          <td class="ov-table__mono">{{ row.username }}</td>
+          <td>
+            {% if row.status == 'completed' %}{{ row.found_count }}{% else %}—{% endif %}
+          </td>
+          <td class="ov-caption">{% if row.status == 'completed' %}{{ row.checked_count }}{% else %}—{% endif %}</td>
+          <td>
+            {% if row.status == 'completed' %}
+            <span class="ov-status ov-status--ok">Done</span>
+            {% elif row.status == 'failed' %}
+            <span class="ov-status ov-status--bad">Failed</span>
+            {% else %}
+            <span class="ov-status ov-status--neutral">Pending</span>
+            {% endif %}
+          </td>
+          <td class="ov-caption">{{ row.updated_at }}</td>
+          <td><a class="ov-link ov-link--icon" href="{% url 'username_osint:detail' row.pk %}">{% ov_icon "eye" size="sm" %}<span>Open</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<script src="{% static 'username_osint/username_scan.js' %}"></script>
+{% endblock %}

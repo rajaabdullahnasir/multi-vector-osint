@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Verify your email — OSINT Vector{% endblock %}
+{% block body %}
+<div class="ov-app" style="display: grid; place-items: center; min-height: 100vh; padding: var(--ov-space-8);">
+  <div class="ov-card" style="width: 100%; max-width: 520px;">
+  {% if resent %}
+    <div class="ov-alert ov-alert--success" style="margin-bottom: var(--ov-space-4);">
+      A new verification link was generated.
+    </div>
+  {% else %}
+    <div class="ov-alert ov-alert--success" style="margin-bottom: var(--ov-space-4);">
+      Account created for <strong>{{ email }}</strong>.
+    </div>
+  {% endif %}
+
+    <h1 class="ov-heading-2">Verify your email</h1>
+    <p class="ov-text-secondary">
+      Click the button below (do not copy from the terminal — long links often break).
+      A copy was also sent to the server console in development.
+    </p>
+
+    <a class="ov-btn ov-btn--primary ov-btn--lg" href="{{ verify_url }}" style="width: 100%; margin-top: var(--ov-space-6);">
+      Verify my email
+    </a>
+
+    <p class="ov-caption ov-mt-6" style="word-break: break-all;">
+      Or open this URL:<br />
+      <a class="ov-link" href="{{ verify_url }}">{{ verify_url }}</a>
+    </p>
+
+    <hr class="ov-divider" />
+    <a class="ov-link" href="{% url 'accounts:login' %}">Back to login</a>
+  </div>
+</div>
+{% endblock %}

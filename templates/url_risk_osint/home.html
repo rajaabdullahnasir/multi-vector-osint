@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load static ov_icons %}
+{% block title %}URL Risk — OSINT Vector{% endblock %}
+{% block page_heading %}URL risk detection{% endblock %}
+{% block page_lead %}<p class="ov-page-lead">Passive risk scoring via lexical heuristics and a static blacklist — no live fetch.</p>{% endblock %}
+{% block content %}
+<div class="ov-workspace">
+  <section class="ov-panel" data-module="url-risk">
+    <header class="ov-panel__head">
+      <h2 class="ov-panel__title">Analyze URL</h2>
+      <p class="ov-panel__lead">Static analysis only — fast and safe for training. Risk levels: Safe, Suspicious, or Dangerous.</p>
+    </header>
+    <form
+      method="post"
+      action="{% url 'url_risk_osint:check' %}"
+      data-url-risk-form
+      data-check-url="{% url 'url_risk_osint:check' %}"
+      novalidate
+    >
+      {% csrf_token %}
+      <div class="ov-field">
+        <label class="ov-field__label" for="id_url">{{ form.url.label }}</label>
+        {{ form.url }}
+        {% if form.url.errors %}
+        <p class="ov-caption js-url-error" style="color: var(--ov-color-danger);">{{ form.url.errors.0 }}</p>
+        {% else %}
+        <p class="ov-caption">{{ form.url.help_text }}</p>
+        {% endif %}
+      </div>
+      <button type="submit" class="ov-btn ov-btn--primary ov-btn--icon" id="url-risk-submit-btn">
+        {% ov_icon "link" size="sm" %}
+        <span>Analyze URL</span>
+      </button>
+    </form>
+  </section>
+</div>
+
+<div id="url-risk-loader" class="ov-loader-overlay" aria-hidden="true">
+  <div class="ov-loader-card">
+    <div class="ov-spinner" aria-hidden="true"></div>
+    <p class="ov-loader__title">Analyzing URL</p>
+    <p class="ov-loader__email js-loader-url"></p>
+    <p class="ov-loader__status js-loader-status">Starting…</p>
+    <div class="ov-progress"><div class="ov-progress__bar ov-progress__bar--indeterminate"></div></div>
+  </div>
+</div>
+
+{% if checks %}
+<section class="ov-section">
+  <div class="ov-section__head">
+    <h2 class="ov-section__title">Recent checks</h2>
+  </div>
+  <div class="ov-table-wrap">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>URL</th>
+          <th>Level</th>
+          <th>Score</th>
+          <th>Status</th>
+          <th>Updated</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in checks %}
+        <tr>
+          <td class="ov-table__mono" style="max-width: 280px; overflow: hidden; text-overflow: ellipsis;">{{ row.url }}</td>
+          <td>
+            {% if row.status == 'completed' %}
+              {% if row.risk_level == 'dangerous' %}
+              <span class="ov-status ov-status--bad">Dangerous</span>
+              {% elif row.risk_level == 'suspicious' %}
+              <span class="ov-status ov-status--neutral">Suspicious</span>
+              {% else %}
+              <span class="ov-status ov-status--ok">Safe</span>
+              {% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td>{% if row.status == 'completed' %}{{ row.risk_score }}{% else %}—{% endif %}</td>
+          <td>
+            {% if row.status == 'completed' %}
+            <span class="ov-status ov-status--ok">Done</span>
+            {% elif row.status == 'failed' %}
+            <span class="ov-status ov-status--bad">Failed</span>
+            {% else %}
+            <span class="ov-status ov-status--neutral">Pending</span>
+            {% endif %}
+          </td>
+          <td class="ov-caption">{{ row.updated_at }}</td>
+          <td><a class="ov-link ov-link--icon" href="{% url 'url_risk_osint:detail' row.pk %}">{% ov_icon "eye" size="sm" %}<span>Open</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<script src="{% static 'url_risk_osint/url_check.js' %}"></script>
+{% endblock %}

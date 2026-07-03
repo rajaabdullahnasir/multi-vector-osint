@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% load static ov_icons %}
+{% block title %}Email Breach — OSINT Vector{% endblock %}
+{% block page_heading %}Email breach{% endblock %}
+{% block page_lead %}<p class="ov-page-lead">Check whether an email appears in public breach databases via XposedOrNot.</p>{% endblock %}
+{% block content %}
+<div class="ov-workspace ov-workspace--split">
+  <section class="ov-panel">
+    <header class="ov-panel__head">
+      <h2 class="ov-panel__title ov-panel__title-row">{% ov_icon "mail" size="sm" %}<span>New check</span></h2>
+      <p class="ov-panel__lead">Enter an email address. Only the check-email endpoint is used — breach names returned.</p>
+    </header>
+    <form
+      method="post"
+      action="{% url 'email_breach_osint:check' %}"
+      data-email-breach-form
+      data-check-url="{% url 'email_breach_osint:check' %}"
+      novalidate
+    >
+      {% csrf_token %}
+      <div class="ov-field">
+        <label class="ov-field__label" for="id_email">{{ form.email.label }}</label>
+        {{ form.email }}
+        {% if form.email.errors %}
+        <p class="ov-caption js-email-error" style="color: var(--ov-color-danger);">{{ form.email.errors.0 }}</p>
+        {% else %}
+        <p class="ov-caption">{{ form.email.help_text }}</p>
+        {% endif %}
+      </div>
+      <button type="submit" class="ov-btn ov-btn--primary ov-btn--icon" id="email-breach-submit-btn">
+        {% ov_icon "mail" size="sm" %}
+        <span>Run check</span>
+      </button>
+    </form>
+  </section>
+
+  <aside class="ov-panel">
+    <header class="ov-panel__head">
+      <h2 class="ov-panel__title ov-panel__title-row">{% ov_icon "info" size="sm" %}<span>API notes</span></h2>
+      <p class="ov-panel__lead">XposedOrNot check-email only — no HIBP fallback.</p>
+    </header>
+    <div class="ov-panel__note">
+      <p class="ov-panel__note-title">Network</p>
+      <ul>
+        <li>Some regions (e.g. Pakistan) may receive HTTP 403 from Cloudflare.</li>
+        <li>Set <code class="ov-table__mono">XPOSEDORNOT_HTTP_PROXY</code> in your environment to route via VPN/proxy.</li>
+        <li>Or self-host the API with <code class="ov-table__mono">XPOSEDORNOT_API_BASE</code>.</li>
+      </ul>
+    </div>
+  </aside>
+</div>
+
+<div id="email-breach-loader" class="ov-loader-overlay" aria-hidden="true">
+  <div class="ov-loader-card">
+    <div class="ov-spinner" aria-hidden="true"></div>
+    <p class="ov-loader__title">Checking email</p>
+    <p class="ov-loader__email js-loader-email"></p>
+    <p class="ov-loader__status js-loader-status">Starting…</p>
+    <div class="ov-progress">
+      <div class="ov-progress__bar ov-progress__bar--indeterminate"></div>
+    </div>
+  </div>
+</div>
+
+{% if checks %}
+<section class="ov-section">
+  <div class="ov-section__head">
+    <h2 class="ov-section__title">Recent checks</h2>
+  </div>
+  <div class="ov-table-wrap">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Breaches</th>
+          <th>Status</th>
+          <th>Updated</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in checks %}
+        <tr>
+          <td class="ov-table__mono">{{ row.email }}</td>
+          <td>
+            {% if row.status == 'completed' %}
+            {% if row.is_pwned %}{{ row.breach_count }}{% else %}0{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if row.status == 'completed' %}
+            {% if row.is_pwned %}
+            <span class="ov-status ov-status--bad">Breached</span>
+            {% else %}
+            <span class="ov-status ov-status--ok">Clear</span>
+            {% endif %}
+            {% elif row.status == 'failed' %}
+            <span class="ov-status ov-status--bad">Failed</span>
+            {% else %}
+            <span class="ov-status ov-status--neutral">Pending</span>
+            {% endif %}
+          </td>
+          <td class="ov-caption">{{ row.updated_at }}</td>
+          <td><a class="ov-link ov-link--icon" href="{% url 'email_breach_osint:detail' row.pk %}">{% ov_icon "eye" size="sm" %}<span>Open</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'email_breach_osint/email_check.js' %}"></script>
+{% endblock %}
+

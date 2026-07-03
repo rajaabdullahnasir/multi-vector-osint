@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+
+{% load static ov_icons %}
+
+{% block title %}Image OSINT — OSINT Vector{% endblock %}
+
+{% block page_heading %}Image OSINT{% endblock %}
+
+{% block page_lead %}<p class="ov-page-lead">Extract EXIF metadata, compute perceptual fingerprint (aHash), and get reverse-search guidance.</p>{% endblock %}
+
+{% block content %}
+
+<div class="ov-workspace ov-workspace--split">
+
+  <section class="ov-panel" data-module="image">
+
+    <header class="ov-panel__head">
+
+      <h2 class="ov-panel__title ov-panel__title-row">{% ov_icon "upload" size="sm" %}<span>Upload &amp; analyze</span></h2>
+
+      <p class="ov-panel__lead">Drag an image here or browse your files. Magic-byte validation runs before parsing.</p>
+
+    </header>
+
+
+
+    <form
+
+      method="post"
+
+      action="{% url 'image_osint:analyze' %}"
+
+      enctype="multipart/form-data"
+
+      data-image-upload-form
+
+      data-max-bytes="{{ upload_max_bytes }}"
+
+    >
+
+      {% csrf_token %}
+
+
+
+      <div class="ov-dropzone-native" data-dropzone-native>
+
+        <div class="ov-field">
+
+          <label class="ov-field__label" for="id_image">{{ form.image.label }}</label>
+
+          {{ form.image }}
+
+          <p class="ov-caption">{{ form.image.help_text }}</p>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="ov-dropzone" data-dropzone>
+
+        <div
+
+          class="ov-dropzone__surface"
+
+          data-dropzone-surface
+
+          role="button"
+
+          tabindex="0"
+
+          aria-label="Drop image file here or press Enter to browse"
+
+        >
+
+          <div data-dropzone-empty>
+
+            <div class="ov-dropzone__icon" aria-hidden="true">{% ov_icon "file-image" size="lg" %}</div>
+
+            <p class="ov-dropzone__title">Drop your image here</p>
+
+            <p class="ov-dropzone__hint">JPG, PNG, TIFF, or WebP · max {{ upload_max_mb }} MB</p>
+
+            <button type="button" class="ov-btn ov-btn--secondary ov-btn--sm ov-dropzone__browse" data-dropzone-browse>
+
+              Browse files
+
+            </button>
+
+          </div>
+
+
+
+          <div class="ov-dropzone__preview-wrap" data-dropzone-preview>
+
+            <img class="ov-dropzone__thumb" data-dropzone-preview-img alt="" />
+
+            <div class="ov-dropzone__fileinfo">
+
+              <p class="ov-dropzone__filename" data-dropzone-filename></p>
+
+              <p class="ov-dropzone__filemeta" data-dropzone-filemeta></p>
+
+            </div>
+
+            <button type="button" class="ov-btn ov-btn--ghost ov-btn--sm ov-btn--icon" data-dropzone-clear aria-label="Remove selected file">
+
+              {% ov_icon "x" size="sm" %}
+
+              <span>Remove</span>
+
+            </button>
+
+          </div>
+
+        </div>
+
+
+
+        <p class="ov-dropzone__error" data-dropzone-error hidden></p>
+      </div>
+
+      <div class="ov-dropzone__actions">
+        <button type="submit" class="ov-btn ov-btn--primary ov-btn--icon" data-dropzone-submit>
+          {% ov_icon "search" size="sm" %}
+          <span>Extract metadata</span>
+        </button>
+      </div>
+    </form>
+
+  </section>
+
+
+
+  <aside class="ov-panel">
+
+    <header class="ov-panel__head">
+
+      <h2 class="ov-panel__title ov-panel__title-row">{% ov_icon "info" size="sm" %}<span>What you get</span></h2>
+
+      <p class="ov-panel__lead">Built-in parsers only — no ExifTool dependency.</p>
+
+    </header>
+
+    <ul class="ov-image-features">
+
+      <li class="ov-image-features__item">
+
+        <span class="ov-image-features__icon" aria-hidden="true">{% ov_icon "image" size="sm" %}</span>
+
+        <span><strong>EXIF &amp; metadata</strong> — camera, timestamps, software, GPS when embedded.</span>
+
+      </li>
+
+      <li class="ov-image-features__item">
+
+        <span class="ov-image-features__icon" aria-hidden="true">{% ov_icon "hash" size="sm" %}</span>
+
+        <span><strong>Fingerprints</strong> — perceptual aHash and SHA-256 for correlation.</span>
+
+      </li>
+
+      <li class="ov-image-features__item">
+
+        <span class="ov-image-features__icon" aria-hidden="true">{% ov_icon "external-link" size="sm" %}</span>
+
+        <span><strong>Reverse search</strong> — guided links to major image search providers.</span>
+
+      </li>
+
+      <li class="ov-image-features__item">
+
+        <span class="ov-image-features__icon" aria-hidden="true">{% ov_icon "shield-alert" size="sm" %}</span>
+
+        <span><strong>Risk flags</strong> — highlights sensitive metadata such as GPS or device IDs.</span>
+
+      </li>
+
+    </ul>
+
+  </aside>
+
+</div>
+
+
+
+{% if analyses %}
+
+<section class="ov-section">
+
+  <div class="ov-section__head">
+
+    <h2 class="ov-section__title ov-panel__title-row">{% ov_icon "clock" size="sm" %}<span>Recent investigations</span></h2>
+
+    <span class="ov-caption">{{ analyses|length }} saved</span>
+
+  </div>
+
+  <div class="ov-table-wrap">
+
+    <table class="ov-table">
+
+      <thead>
+
+        <tr>
+
+          <th style="width: 3rem;"></th>
+
+          <th>Filename</th>
+
+          <th>Format</th>
+
+          <th>Dimensions</th>
+
+          <th>EXIF</th>
+
+          <th>Status</th>
+
+          <th>Created</th>
+
+          <th></th>
+
+        </tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for row in analyses %}
+
+        <tr>
+
+          <td>
+
+            {% if row.image %}
+
+            <img class="ov-image-thumb" src="{{ row.image.url }}" alt="" loading="lazy" />
+
+            {% else %}
+
+            <span class="ov-image-thumb ov-image-thumb--empty" aria-hidden="true">{% ov_icon "image" size="sm" %}</span>
+
+            {% endif %}
+
+          </td>
+
+          <td>{{ row.original_filename }}</td>
+
+          <td class="ov-table__mono">{{ row.detected_format|default:"—" }}</td>
+
+          <td class="ov-table__mono">{% if row.width %}{{ row.width }}×{{ row.height }}{% else %}—{% endif %}</td>
+
+          <td>
+
+            {% if row.has_exif %}
+
+            <span class="ov-status ov-status--ok">Yes</span>
+
+            {% else %}
+
+            <span class="ov-status ov-status--neutral">No</span>
+
+            {% endif %}
+
+          </td>
+
+          <td>
+
+            {% if row.status == 'completed' %}
+
+            <span class="ov-status ov-status--ok">Done</span>
+
+            {% elif row.status == 'failed' %}
+
+            <span class="ov-status ov-status--bad">Failed</span>
+
+            {% else %}
+
+            <span class="ov-status ov-status--neutral">Pending</span>
+
+            {% endif %}
+
+          </td>
+
+          <td class="ov-caption">{{ row.created_at }}</td>
+
+          <td><a class="ov-link ov-link--icon" href="{% url 'image_osint:detail' row.pk %}">{% ov_icon "eye" size="sm" %}<span>Open</span></a></td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+</section>
+
+{% endif %}
+
+{% endblock %}
+
+
+
+{% block extra_js %}
+
+<script src="{% static 'image_osint/image_upload.js' %}"></script>
+
+{% endblock %}
+
+

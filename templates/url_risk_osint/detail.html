@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}URL Risk — OSINT Vector{% endblock %}
+{% block page_heading %}URL risk report{% endblock %}
+{% block content %}
+{% url 'url_risk_osint:export_json' check.pk as export_url %}
+{% url 'url_risk_osint:home' as back_url %}
+{% url 'url_risk_osint:delete' check.pk as delete_url %}
+{% include "partials/report_bar.html" with report_label="URL risk" report_title=check.url report_meta=check.updated_at export_url=export_url back_url=back_url delete_url=delete_url delete_confirm="Delete this check?" %}
+
+{% if check.status == 'failed' %}
+<div class="ov-alert ov-alert--danger">{{ check.error_message }}</div>
+{% else %}
+
+<div class="ov-report-meta">
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Risk level</div>
+    <div class="ov-report-meta__value">
+      {% if check.risk_level == 'dangerous' %}
+      <span class="ov-status ov-status--bad">Dangerous</span>
+      {% elif check.risk_level == 'suspicious' %}
+      <span class="ov-status ov-status--neutral">Suspicious</span>
+      {% else %}
+      <span class="ov-status ov-status--ok">Safe</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Risk score</div>
+    <div class="ov-report-meta__value">{{ check.risk_score }} / 100</div>
+  </div>
+</div>
+
+{% if risk_flags %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-6);">
+  <h3 class="ov-panel__title">Risk flags</h3>
+  <ul class="ov-text-secondary" style="margin: var(--ov-space-4) 0 0; padding-left: 1.1rem; line-height: 1.7; color: var(--ov-color-warning);">
+    {% for flag in risk_flags %}
+    <li>{{ flag }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if parsed %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);" data-module="url-risk">
+  <h3 class="ov-panel__title">Parsed URL</h3>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <tbody>
+        {% for label, val in parsed.items %}
+        <tr>
+          <th style="width: 28%; font-weight: 500;">{{ label }}</th>
+          <td class="ov-table__mono" style="word-break: break-word;">{{ val }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if blacklist_hits %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);" data-module="url-risk">
+  <h3 class="ov-panel__title">Blacklist matches</h3>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>Source</th>
+          <th>Severity</th>
+          <th>Rule</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in blacklist_hits %}
+        <tr>
+          <td>{{ row.source }}</td>
+          <td>
+            {% if row.severity == 'high' %}
+            <span class="ov-status ov-status--bad">High</span>
+            {% else %}
+            <span class="ov-status ov-status--neutral">Medium</span>
+            {% endif %}
+          </td>
+          <td>{{ row.rule }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if lexical_findings %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);" data-module="url-risk">
+  <h3 class="ov-panel__title">Lexical findings</h3>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Score</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in lexical_findings %}
+        <tr>
+          <td class="ov-caption">{{ row.category }}</td>
+          <td>+{{ row.score }}</td>
+          <td>{{ row.description }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% elif check.status == 'completed' and not blacklist_hits %}
+<div class="ov-alert ov-alert--success">No lexical or blacklist indicators triggered.</div>
+{% endif %}
+
+{% for section_name, section_fields in metadata_sections %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);" data-module="url-risk">
+  <h3 class="ov-panel__title">{{ section_name }}</h3>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <tbody>
+        {% for label, val in section_fields.items %}
+        <tr>
+          <th style="width: 36%; font-weight: 500;">{{ label }}</th>
+          <td style="word-break: break-word;">{{ val }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% endif %}
+{% endblock %}

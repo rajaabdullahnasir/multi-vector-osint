@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% load static ov_icons %}
+{% block title %}Password Hasher — OSINT Vector{% endblock %}
+{% block page_heading %}Password hasher{% endblock %}
+{% block page_lead %}<p class="ov-page-lead">Educational hashing tool — MD5, SHA family, Base64 encode/decode. Plaintext is not saved.</p>{% endblock %}
+{% block content %}
+<div class="ov-workspace ov-workspace--split">
+  <section class="ov-panel" data-module="hasher">
+    <header class="ov-panel__head">
+      <h2 class="ov-panel__title">Generate hashes</h2>
+      <p class="ov-panel__lead">MD5, SHA-1, SHA-256, SHA-512, Base64 encode/decode.</p>
+    </header>
+    <form
+      method="post"
+      action="{% url 'password_hasher_osint:hash' %}"
+      data-hasher-hash-form
+      data-action-url="{% url 'password_hasher_osint:hash' %}"
+    >
+      {% csrf_token %}
+      <div class="ov-field">
+        <label class="ov-field__label" for="{{ hash_form.plaintext.id_for_label }}">{{ hash_form.plaintext.label }}</label>
+        {{ hash_form.plaintext }}
+        {% if hash_form.plaintext.errors %}
+        <p class="ov-caption" style="color: var(--ov-color-danger);">{{ hash_form.plaintext.errors.0 }}</p>
+        {% endif %}
+      </div>
+      <fieldset class="ov-field" style="margin-top: var(--ov-space-6);">
+        <legend class="ov-field__label">{{ hash_form.algorithms.label }}</legend>
+        <div class="ov-flex" style="flex-direction: column; gap: var(--ov-space-2);">
+          {% for checkbox in hash_form.algorithms %}
+          <label class="ov-flex ov-gap-2" style="align-items: center; cursor: pointer;">
+            {{ checkbox.tag }}
+            <span>{{ checkbox.choice_label }}</span>
+          </label>
+          {% endfor %}
+        </div>
+        {% if hash_form.algorithms.errors %}
+        <p class="ov-caption" style="color: var(--ov-color-danger);">{{ hash_form.algorithms.errors.0 }}</p>
+        {% endif %}
+      </fieldset>
+      {% if hash_form.non_field_errors %}
+      <p class="ov-caption" style="margin-top: var(--ov-space-4); color: var(--ov-color-danger);">{{ hash_form.non_field_errors.0 }}</p>
+      {% endif %}
+      <button type="submit" class="ov-btn ov-btn--primary ov-btn--icon" style="margin-top: var(--ov-space-6);">
+        {% ov_icon "hash" size="sm" %}
+        <span>Generate hashes</span>
+      </button>
+    </form>
+  </section>
+
+  <section class="ov-panel" data-module="hasher">
+    <header class="ov-panel__head">
+      <h2 class="ov-panel__title">Compare hash</h2>
+      <p class="ov-panel__lead">Test whether text matches a known hex digest.</p>
+    </header>
+    <form
+      method="post"
+      action="{% url 'password_hasher_osint:compare' %}"
+      data-hasher-compare-form
+      data-action-url="{% url 'password_hasher_osint:compare' %}"
+    >
+      {% csrf_token %}
+      <div class="ov-field">
+        <label class="ov-field__label" for="{{ compare_form.plaintext.id_for_label }}">{{ compare_form.plaintext.label }}</label>
+        {{ compare_form.plaintext }}
+      </div>
+      <div class="ov-field" style="margin-top: var(--ov-space-6);">
+        <label class="ov-field__label" for="{{ compare_form.target_hash.id_for_label }}">{{ compare_form.target_hash.label }}</label>
+        {{ compare_form.target_hash }}
+      </div>
+      <div class="ov-field" style="margin-top: var(--ov-space-6);">
+        <label class="ov-field__label" for="{{ compare_form.algorithm.id_for_label }}">{{ compare_form.algorithm.label }}</label>
+        {{ compare_form.algorithm }}
+      </div>
+      {% if compare_form.non_field_errors %}
+      <p class="ov-caption" style="margin-top: var(--ov-space-4); color: var(--ov-color-danger);">{{ compare_form.non_field_errors.0 }}</p>
+      {% endif %}
+      <button type="submit" class="ov-btn ov-btn--secondary ov-btn--icon" style="margin-top: var(--ov-space-6);">
+        {% ov_icon "search" size="sm" %}
+        <span>Compare</span>
+      </button>
+    </form>
+    <div class="ov-panel__note" style="margin-top: var(--ov-space-6);">
+      <p class="ov-panel__note-title">Educational use only</p>
+      <p>MD5 and SHA-1 are weak — never use them to store real passwords.</p>
+    </div>
+  </section>
+</div>
+
+{% if jobs %}
+<section class="ov-section">
+  <div class="ov-section__head">
+    <h2 class="ov-section__title">Recent jobs</h2>
+  </div>
+  <div class="ov-table-wrap">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>Mode</th>
+          <th>Result</th>
+          <th>Algorithms</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in jobs %}
+        <tr>
+          <td>{{ row.get_mode_display }}</td>
+          <td>
+            {% if row.mode == 'compare' %}
+              {% if row.matched %}
+              <span class="ov-status ov-status--ok">Match</span>
+              {% else %}
+              <span class="ov-status ov-status--bad">No match</span>
+              {% endif %}
+            {% else %}
+            {{ row.summary_label }}
+            {% endif %}
+          </td>
+          <td class="ov-caption">{{ row.algorithms|join:", " }}</td>
+          <td class="ov-caption">{{ row.created_at }}</td>
+          <td><a class="ov-link ov-link--icon" href="{% url 'password_hasher_osint:detail' row.pk %}">{% ov_icon "eye" size="sm" %}<span>Open</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<script src="{% static 'password_hasher_osint/hasher.js' %}"></script>
+{% endblock %}

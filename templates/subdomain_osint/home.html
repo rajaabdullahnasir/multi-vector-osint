@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load static ov_icons %}
+{% block title %}Subdomain Finder — OSINT Vector{% endblock %}
+{% block page_heading %}Subdomain finder{% endblock %}
+{% block page_lead %}<p class="ov-page-lead">Passive discovery via common DNS labels and Certificate Transparency (crt.sh) — no port scanning.</p>{% endblock %}
+{% block content %}
+<div class="ov-workspace">
+  <section class="ov-panel" data-module="subdomain">
+    <header class="ov-panel__head">
+      <h2 class="ov-panel__title">Subdomain scan</h2>
+      <p class="ov-panel__lead">Enter a root domain to probe DNS labels and query public certificate logs.</p>
+    </header>
+    <form
+      method="post"
+      action="{% url 'subdomain_osint:scan' %}"
+      data-subdomain-scan-form
+      data-scan-url="{% url 'subdomain_osint:scan' %}"
+      novalidate
+    >
+      {% csrf_token %}
+      <div class="ov-field">
+        <label class="ov-field__label" for="id_domain">{{ form.domain.label }}</label>
+        {{ form.domain }}
+        {% if form.domain.errors %}
+        <p class="ov-caption js-domain-error" style="color: var(--ov-color-danger);">{{ form.domain.errors.0 }}</p>
+        {% else %}
+        <p class="ov-caption">{{ form.domain.help_text }}</p>
+        {% endif %}
+      </div>
+      <button type="submit" class="ov-btn ov-btn--primary ov-btn--icon" id="subdomain-submit-btn">
+        {% ov_icon "layers" size="sm" %}
+        <span>Run subdomain scan</span>
+      </button>
+    </form>
+  </section>
+</div>
+
+<div id="subdomain-loader" class="ov-loader-overlay" aria-hidden="true">
+  <div class="ov-loader-card">
+    <div class="ov-spinner" aria-hidden="true"></div>
+    <p class="ov-loader__title">Running subdomain scan</p>
+    <p class="ov-loader__domain js-loader-domain"></p>
+    <p class="ov-loader__status js-loader-status">Starting…</p>
+    <div class="ov-progress"><div class="ov-progress__bar ov-progress__bar--indeterminate"></div></div>
+  </div>
+</div>
+
+{% if scans %}
+<section class="ov-section">
+  <div class="ov-section__head">
+    <h2 class="ov-section__title">Recent scans</h2>
+  </div>
+  <div class="ov-table-wrap">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>Domain</th>
+          <th>Found</th>
+          <th>DNS verified</th>
+          <th>Status</th>
+          <th>Updated</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in scans %}
+        <tr>
+          <td class="ov-table__mono">{{ row.domain }}</td>
+          <td>{{ row.subdomain_count }}</td>
+          <td>{{ row.dns_verified_count }}</td>
+          <td>
+            {% if row.status == 'completed' %}
+            <span class="ov-status ov-status--ok">Done</span>
+            {% elif row.status == 'failed' %}
+            <span class="ov-status ov-status--bad">Failed</span>
+            {% else %}
+            <span class="ov-status ov-status--neutral">Pending</span>
+            {% endif %}
+          </td>
+          <td class="ov-caption">{{ row.updated_at }}</td>
+          <td><a class="ov-link ov-link--icon" href="{% url 'subdomain_osint:detail' row.pk %}">{% ov_icon "eye" size="sm" %}<span>Open</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<script src="{% static 'subdomain_osint/subdomain_scan.js' %}"></script>
+{% endblock %}

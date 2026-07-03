@@ -1,0 +1,50 @@
+/**
+ * OSINT Vector — Complete theme bundle
+ * Single import for Django/static or React apps
+ *
+ * @example
+ *   <link rel="stylesheet" href="/static/design-system/theme.css" />
+ */
+
+@import "./tokens.css";
+@import "./typography.css";
+@import "./components.css";
+
+html {
+  scroll-behavior: smooth;
+}
+
+body.ov-body {
+  margin: 0;
+  background: var(--ov-bg-canvas);
+}
+
+/* Focus visible — accessibility */
+:focus-visible {
+  outline: 2px solid var(--ov-color-accent);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--ov-bg-surface-hover);
+  color: var(--ov-text-primary);
+}
+
+/* Scrollbar — subtle dark */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--ov-bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--ov-bg-surface-hover);
+  border-radius: var(--ov-radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ov-text-muted);
+}

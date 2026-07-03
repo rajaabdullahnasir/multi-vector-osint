@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% load ov_icons %}
+{% block title %}Register — OSINT Vector{% endblock %}
+{% block body %}
+<div class="ov-auth">
+  <div class="ov-auth__card ov-panel">
+    <div class="ov-auth__brand">
+      <div class="ov-sidebar__logo">{% ov_icon "brand" size="lg" %}</div>
+      <p class="ov-auth__brand-title">OSINT Vector</p>
+      <p class="ov-auth__brand-lead">Create your investigation workspace account</p>
+    </div>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="ov-alert ov-alert--danger" style="margin-bottom: var(--ov-space-4);">
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+      {% for field in form %}
+      <div class="ov-field">
+        <label class="ov-field__label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<p class="ov-caption">{{ field.help_text }}</p>{% endif %}
+        {% if field.errors %}<p class="ov-caption" style="color: var(--ov-color-danger);">{{ field.errors.0 }}</p>{% endif %}
+      </div>
+      {% endfor %}
+      <button type="submit" class="ov-btn ov-btn--primary ov-btn--icon" style="width: 100%; margin-top: var(--ov-space-2);">
+        {% ov_icon "user-plus" size="sm" %}
+        <span>Register</span>
+      </button>
+    </form>
+    <p class="ov-caption" style="margin-top: var(--ov-space-6);">
+      Already registered? <a class="ov-link ov-link--icon" href="{% url 'accounts:login' %}">{% ov_icon "log-in" size="sm" %}<span>Sign in</span></a>
+    </p>
+  </div>
+</div>
+{% endblock %}
+

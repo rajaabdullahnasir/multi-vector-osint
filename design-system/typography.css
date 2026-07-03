@@ -1,0 +1,95 @@
+.ov-body {
+  font-family: var(--ov-font-sans);
+  font-size: var(--ov-text-base);
+  font-weight: var(--ov-weight-normal);
+  line-height: var(--ov-leading-normal);
+  color: var(--ov-text-primary);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+.ov-heading-1 {
+  font-size: var(--ov-text-xl);
+  font-weight: var(--ov-weight-semibold);
+  line-height: var(--ov-leading-tight);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.ov-heading-2 {
+  font-size: var(--ov-text-lg);
+  font-weight: var(--ov-weight-semibold);
+  line-height: var(--ov-leading-tight);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.ov-heading-3 {
+  font-size: var(--ov-text-base);
+  font-weight: var(--ov-weight-semibold);
+  margin: 0;
+}
+
+.ov-page-lead {
+  margin: var(--ov-space-2) 0 0;
+  font-size: var(--ov-text-sm);
+  color: var(--ov-text-secondary);
+  line-height: var(--ov-leading-relaxed);
+  max-width: 42rem;
+}
+
+.ov-caption {
+  font-size: var(--ov-text-xs);
+  color: var(--ov-text-muted);
+  line-height: var(--ov-leading-relaxed);
+}
+
+.ov-overline {
+  font-size: 0.6875rem;
+  font-weight: var(--ov-weight-medium);
+  letter-spacing: var(--ov-tracking-caps);
+  text-transform: uppercase;
+  color: var(--ov-text-muted);
+}
+
+.ov-text-secondary {
+  color: var(--ov-text-secondary);
+}
+
+.ov-link {
+  color: var(--ov-text-link);
+  text-decoration: none;
+  font-weight: var(--ov-weight-medium);
+  transition: color var(--ov-duration-fast) var(--ov-ease-default);
+}
+
+.ov-link:hover {
+  color: var(--ov-text-link-hover);
+}
+
+.ov-table__mono,
+.ov-mono {
+  font-family: var(--ov-font-mono);
+  font-size: 0.8125rem;
+}
+
+.ov-label {
+  display: block;
+  font-size: var(--ov-text-xs);
+  font-weight: var(--ov-weight-medium);
+  color: var(--ov-text-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--ov-tracking-caps);
+  margin: 0 0 var(--ov-space-2);
+}
+
+.ov-mono-block {
+  font-family: var(--ov-font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  padding: var(--ov-space-4);
+  background: var(--ov-bg-surface);
+  border: 1px solid var(--ov-border-subtle);
+  border-radius: var(--ov-radius-md);
+  overflow: auto;
+}

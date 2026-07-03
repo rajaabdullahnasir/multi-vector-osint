@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% load static ov_icons %}
+{% block title %}Password Breach — OSINT Vector{% endblock %}
+{% block page_heading %}Password breach check{% endblock %}
+{% block page_lead %}<p class="ov-page-lead">See if a password appears in known breach corpuses via Pwned Passwords k-anonymity.</p>{% endblock %}
+{% block content %}
+<div class="ov-workspace ov-workspace--split">
+  <section class="ov-panel" data-module="password-breach">
+    <header class="ov-panel__head">
+      <h2 class="ov-panel__title">Check password</h2>
+      <p class="ov-panel__lead">Password is hashed locally (SHA-1). Only the first 5 hash characters are sent to the API.</p>
+    </header>
+    <form
+      method="post"
+      action="{% url 'password_breach_osint:check' %}"
+      data-password-breach-form
+      data-check-url="{% url 'password_breach_osint:check' %}"
+      novalidate
+    >
+      {% csrf_token %}
+      <div class="ov-field">
+        <label class="ov-field__label" for="id_password">{{ form.password.label }}</label>
+        {{ form.password }}
+        {% if form.password.errors %}
+        <p class="ov-caption js-password-error" style="color: var(--ov-color-danger);">{{ form.password.errors.0 }}</p>
+        {% else %}
+        <p class="ov-caption">{{ form.password.help_text }}</p>
+        {% endif %}
+      </div>
+      <button type="submit" class="ov-btn ov-btn--primary ov-btn--icon" id="password-breach-submit-btn">
+        {% ov_icon "shield-alert" size="sm" %}
+        <span>Check password</span>
+      </button>
+    </form>
+  </section>
+
+  <aside class="ov-panel">
+    <header class="ov-panel__head">
+      <h2 class="ov-panel__title">K-anonymity</h2>
+      <p class="ov-panel__lead">Plaintext is never stored. Only a hash prefix leaves your browser.</p>
+    </header>
+    <div class="ov-panel__note">
+      <p class="ov-panel__note-title">How it works</p>
+      <ul>
+        <li><code class="ov-table__mono">SHA1(password)</code> → uppercase hex</li>
+        <li>Only <code class="ov-table__mono">hash[0..5]</code> sent to api.pwnedpasswords.com</li>
+        <li>Suffix matched against the range response locally</li>
+      </ul>
+    </div>
+  </aside>
+</div>
+
+<div id="password-breach-loader" class="ov-loader-overlay" aria-hidden="true">
+  <div class="ov-loader-card">
+    <div class="ov-spinner" aria-hidden="true"></div>
+    <p class="ov-loader__title">Checking password</p>
+    <p class="ov-loader__status js-loader-status">Hashing locally…</p>
+    <div class="ov-progress"><div class="ov-progress__bar ov-progress__bar--indeterminate"></div></div>
+  </div>
+</div>
+
+{% if checks %}
+<section class="ov-section">
+  <div class="ov-section__head">
+    <h2 class="ov-section__title">Recent checks</h2>
+  </div>
+  <div class="ov-table-wrap">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>SHA-1 (masked)</th>
+          <th>Exposures</th>
+          <th>Status</th>
+          <th>Updated</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in checks %}
+        <tr>
+          <td class="ov-table__mono">{{ row.masked_sha1 }}</td>
+          <td>
+            {% if row.status == 'completed' %}
+              {% if row.is_pwned %}{{ row.exposure_count }}{% else %}0{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if row.status == 'completed' %}
+              {% if row.is_pwned %}
+              <span class="ov-status ov-status--bad">Pwned</span>
+              {% else %}
+              <span class="ov-status ov-status--ok">Clear</span>
+              {% endif %}
+            {% elif row.status == 'failed' %}
+            <span class="ov-status ov-status--bad">Failed</span>
+            {% else %}
+            <span class="ov-status ov-status--neutral">Pending</span>
+            {% endif %}
+          </td>
+          <td class="ov-caption">{{ row.updated_at }}</td>
+          <td><a class="ov-link ov-link--icon" href="{% url 'password_breach_osint:detail' row.pk %}">{% ov_icon "eye" size="sm" %}<span>Open</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<script src="{% static 'password_breach_osint/password_check.js' %}"></script>
+{% endblock %}

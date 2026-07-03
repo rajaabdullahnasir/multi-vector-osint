@@ -1,0 +1,109 @@
+/**
+ * OSINT Vector — design tokens
+ * Neutral investigative UI — single accent, no per-module rainbow
+ */
+
+:root {
+  --ov-color-accent: #5b8def;
+  --ov-color-accent-hover: #7aa3f5;
+  --ov-color-accent-muted: rgba(91, 141, 239, 0.12);
+  --ov-color-accent-border: rgba(91, 141, 239, 0.35);
+
+  --ov-bg-root: #09090b;
+  --ov-bg-canvas: #09090b;
+  --ov-bg-base: #0f0f12;
+  --ov-bg-elevated: #16161a;
+  --ov-bg-surface: #1c1c21;
+  --ov-bg-surface-hover: #242429;
+  --ov-bg-overlay: rgba(9, 9, 11, 0.72);
+
+  --ov-border-subtle: rgba(255, 255, 255, 0.06);
+  --ov-border-default: rgba(255, 255, 255, 0.1);
+  --ov-border-strong: rgba(255, 255, 255, 0.16);
+
+  --ov-text-primary: #f4f4f5;
+  --ov-text-secondary: #a1a1aa;
+  --ov-text-muted: #71717a;
+  --ov-text-inverse: #09090b;
+  --ov-text-link: #7aa3f5;
+  --ov-text-link-hover: #9bb8f8;
+
+  --ov-color-success: #4ade80;
+  --ov-color-success-muted: rgba(74, 222, 128, 0.12);
+  --ov-color-warning: #fbbf24;
+  --ov-color-warning-muted: rgba(251, 191, 36, 0.12);
+  --ov-color-danger: #f87171;
+  --ov-color-danger-muted: rgba(248, 113, 113, 0.12);
+  --ov-color-info: #60a5fa;
+  --ov-color-info-muted: rgba(96, 165, 250, 0.12);
+
+  --ov-font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --ov-font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+
+  --ov-text-xs: 0.75rem;
+  --ov-text-sm: 0.8125rem;
+  --ov-text-base: 0.9375rem;
+  --ov-text-lg: 1.0625rem;
+  --ov-text-xl: 1.25rem;
+  --ov-text-2xl: 1.5rem;
+  --ov-text-3xl: 1.875rem;
+
+  --ov-weight-normal: 400;
+  --ov-weight-medium: 500;
+  --ov-weight-semibold: 600;
+
+  --ov-leading-tight: 1.25;
+  --ov-leading-normal: 1.5;
+  --ov-leading-relaxed: 1.65;
+
+  --ov-tracking-caps: 0.06em;
+
+  --ov-space-1: 0.25rem;
+  --ov-space-2: 0.5rem;
+  --ov-space-3: 0.75rem;
+  --ov-space-4: 1rem;
+  --ov-space-5: 1.25rem;
+  --ov-space-6: 1.5rem;
+  --ov-space-8: 2rem;
+  --ov-space-10: 2.5rem;
+  --ov-space-12: 3rem;
+
+  --ov-radius-sm: 4px;
+  --ov-radius-md: 6px;
+  --ov-radius-lg: 8px;
+  --ov-radius-xl: 12px;
+  --ov-radius-full: 9999px;
+
+  --ov-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ov-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --ov-shadow-card: none;
+
+  --ov-duration-fast: 120ms;
+  --ov-duration-normal: 180ms;
+  --ov-ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --ov-sidebar-width: 15.5rem;
+  --ov-header-height: 3.5rem;
+  --ov-content-max: 68rem;
+
+  --ov-z-sticky: 100;
+  --ov-z-modal: 300;
+
+  /* Legacy aliases used in templates */
+  --ov-color-primary: var(--ov-color-accent);
+  --ov-color-primary-hover: var(--ov-color-accent-hover);
+  --ov-color-primary-muted: var(--ov-color-accent-muted);
+  --ov-color-primary-border: var(--ov-color-accent-border);
+  --ov-color-success-bg: var(--ov-color-success-muted);
+  --ov-color-warning-bg: var(--ov-color-warning-muted);
+  --ov-color-danger-bg: var(--ov-color-danger-muted);
+  --ov-color-info-bg: var(--ov-color-info-muted);
+  --ov-card-bg: var(--ov-bg-elevated);
+  --ov-card-border: var(--ov-border-subtle);
+  --ov-input-bg: var(--ov-bg-surface);
+  --ov-input-border: var(--ov-border-default);
+  --ov-input-focus-ring: 0 0 0 1px var(--ov-bg-root), 0 0 0 3px var(--ov-color-accent-border);
+  --ov-btn-primary-bg: var(--ov-color-accent);
+  --ov-btn-primary-text: #fff;
+  --ov-btn-primary-hover-bg: var(--ov-color-accent-hover);
+}

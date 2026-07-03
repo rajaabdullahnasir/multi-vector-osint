@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% load ov_icons %}
+{% block title %}{{ lookup.username }} — Username OSINT{% endblock %}
+{% block page_heading %}Username OSINT report{% endblock %}
+{% block content %}
+{% url 'username_osint:export_json' lookup.pk as export_url %}
+{% url 'username_osint:home' as back_url %}
+{% url 'username_osint:delete' lookup.pk as delete_url %}
+{% include "partials/report_bar.html" with report_label="Username OSINT" report_title=lookup.username report_meta=lookup.updated_at export_url=export_url back_url=back_url delete_url=delete_url delete_confirm="Delete this scan?" %}
+
+{% if lookup.status == 'failed' %}
+<div class="ov-alert ov-alert--danger">{{ lookup.error_message }}</div>
+{% else %}
+
+<div class="ov-report-meta">
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Profiles found</div>
+    <div class="ov-report-meta__value">{{ lookup.found_count }}</div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Platforms checked</div>
+    <div class="ov-report-meta__value">{{ lookup.checked_count }}</div>
+  </div>
+</div>
+
+{% if risk_flags %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-6);">
+  <h3 class="ov-panel__title">Risk flags</h3>
+  <ul class="ov-text-secondary" style="margin: var(--ov-space-4) 0 0; padding-left: 1.1rem; line-height: 1.7; color: var(--ov-color-warning);">
+    {% for flag in risk_flags %}
+    <li>{{ flag }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if found_platforms %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-6);" data-module="username">
+  <h3 class="ov-panel__title">Profiles found</h3>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>Platform</th>
+          <th>Category</th>
+          <th>HTTP</th>
+          <th>Profile URL</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in found_platforms %}
+        <tr>
+          <td><strong>{{ row.platform }}</strong></td>
+          <td class="ov-caption">{{ row.category }}</td>
+          <td class="ov-caption">{{ row.status_code|default:"—" }}</td>
+          <td><a class="ov-link ov-link--icon" href="{{ row.url }}" target="_blank" rel="noopener noreferrer">{% ov_icon "external-link" size="sm" %}<span>{{ row.url }}</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% elif lookup.status == 'completed' %}
+<div class="ov-alert ov-alert--success">No matching public profiles on the configured platforms.</div>
+{% endif %}
+
+{% if not_found_platforms %}
+<details class="ov-panel" style="margin-bottom: var(--ov-space-4);">
+  <summary class="ov-panel__title" style="cursor: pointer;">Platforms with no match ({{ not_found_platforms|length }})</summary>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>Platform</th>
+          <th>Category</th>
+          <th>HTTP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in not_found_platforms %}
+        <tr>
+          <td>{{ row.platform }}</td>
+          <td class="ov-caption">{{ row.category }}</td>
+          <td class="ov-caption">{{ row.status_code|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</details>
+{% endif %}
+
+{% for section_name, section_fields in metadata_sections %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);" data-module="username">
+  <h3 class="ov-panel__title">{{ section_name }}</h3>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <tbody>
+        {% for label, val in section_fields.items %}
+        <tr>
+          <th style="width: 36%; font-weight: 500;">{{ label }}</th>
+          <td style="word-break: break-word;">{{ val }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% endif %}
+{% endblock %}

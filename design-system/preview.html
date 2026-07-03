@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OSINT Vector — Design System Preview</title>
+    <link rel="stylesheet" href="theme.css" />
+  </head>
+  <body class="ov-body ov-app">
+    <div class="ov-shell">
+      <aside class="ov-sidebar" aria-label="Main navigation">
+        <div class="ov-sidebar__brand">
+          <div class="ov-sidebar__logo" aria-hidden="true">OV</div>
+          <div>
+            <div class="ov-sidebar__title">OSINT Vector</div>
+            <div class="ov-sidebar__subtitle">Multi-Vector Analyzer</div>
+          </div>
+        </div>
+        <nav>
+          <ul class="ov-nav">
+            <li class="ov-nav__item">
+              <a class="ov-nav__link ov-nav__link--active" href="#">
+                <span class="ov-nav__icon">◉</span> Dashboard
+              </a>
+            </li>
+            <li class="ov-nav__item">
+              <a class="ov-nav__link" href="#"><span class="ov-nav__icon">◇</span> Investigations</a>
+            </li>
+            <li class="ov-nav__item">
+              <a class="ov-nav__link" href="#"><span class="ov-nav__icon">▣</span> Reports</a>
+            </li>
+            <li class="ov-nav__item">
+              <a class="ov-nav__link" href="#"><span class="ov-nav__icon">⚙</span> Admin</a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+      <div class="ov-main">
+        <header class="ov-header">
+          <div>
+            <span class="ov-overline">Security Analyst</span>
+            <h1 class="ov-heading-1" style="margin: 0">Dashboard</h1>
+          </div>
+          <div class="ov-flex ov-gap-2">
+            <span class="ov-badge ov-badge--brand">Passive OSINT</span>
+            <div class="ov-avatar" title="User">AK</div>
+          </div>
+        </header>
+
+        <main class="ov-content">
+          <section class="ov-stats" aria-label="Quick stats">
+            <div class="ov-stat">
+              <div class="ov-stat__value">12</div>
+              <div class="ov-stat__label">Scans today</div>
+            </div>
+            <div class="ov-stat">
+              <div class="ov-stat__value">3</div>
+              <div class="ov-stat__label">Breaches found</div>
+            </div>
+            <div class="ov-stat">
+              <div class="ov-stat__value">98%</div>
+              <div class="ov-stat__label">Uptime</div>
+            </div>
+          </section>
+
+          <p class="ov-text-secondary ov-mt-6" style="margin-bottom: var(--ov-space-6)">
+            TryHackMe-inspired design system for iSeeWaves OSINT platform. Select a module to begin.
+          </p>
+
+          <div class="ov-module-grid">
+            <article class="ov-card ov-module-card ov-card--interactive" data-module="whois">
+              <div class="ov-module-card__icon">🌐</div>
+              <h2 class="ov-card__title">WHOIS Lookup</h2>
+              <p class="ov-card__desc">Domain registration, DNS records, passive footprinting.</p>
+              <span class="ov-badge ov-badge--easy">Ready</span>
+            </article>
+            <article class="ov-card ov-module-card ov-card--interactive" data-module="subdomain">
+              <div class="ov-module-card__icon">🔍</div>
+              <h2 class="ov-card__title">Subdomain Finder</h2>
+              <p class="ov-card__desc">Passive enumeration via Sublist3r / Amass.</p>
+              <span class="ov-badge ov-badge--info">Idle</span>
+            </article>
+            <article class="ov-card ov-module-card ov-card--interactive" data-module="email-breach">
+              <div class="ov-module-card__icon">✉</div>
+              <h2 class="ov-card__title">Email Breach Check</h2>
+              <p class="ov-card__desc">XposedOrNot free API breach summaries.</p>
+              <span class="ov-badge ov-badge--medium">API limited</span>
+            </article>
+            <article class="ov-card ov-module-card ov-card--interactive" data-module="url-risk">
+              <div class="ov-module-card__icon">🔗</div>
+              <h2 class="ov-card__title">URL Risk Detection</h2>
+              <p class="ov-card__desc">Lexical analysis + blacklist verification.</p>
+              <span class="ov-badge ov-badge--dangerous">Demo</span>
+            </article>
+          </div>
+
+          <hr class="ov-divider" />
+
+          <h2 class="ov-heading-2">Component samples</h2>
+
+          <div class="ov-card ov-mt-6">
+            <div class="ov-card__header">
+              <h3 class="ov-card__title">WHOIS — example.com</h3>
+              <span class="ov-badge ov-badge--safe">Safe</span>
+            </div>
+            <div class="ov-field">
+              <label class="ov-field__label" for="domain">Target domain</label>
+              <input class="ov-input ov-input--mono" id="domain" type="text" value="example.com" />
+            </div>
+            <div class="ov-flex">
+              <button type="button" class="ov-btn ov-btn--primary">Run lookup</button>
+              <button type="button" class="ov-btn ov-btn--secondary">Export CSV</button>
+            </div>
+            <p class="ov-caption" style="margin-top: var(--ov-space-4)">Scan progress</p>
+            <div class="ov-progress" style="margin-top: var(--ov-space-2)">
+              <div class="ov-progress__bar" style="width: 65%"></div>
+            </div>
+          </div>
+
+          <div class="ov-table-wrap ov-mt-6">
+            <table class="ov-table">
+              <thead>
+                <tr>
+                  <th>Subdomain</th>
+                  <th>Status</th>
+                  <th>IP</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="ov-table__mono">api.example.com</td>
+                  <td><span class="ov-badge ov-badge--active">Active</span></td>
+                  <td class="ov-table__mono">93.184.216.34</td>
+                </tr>
+                <tr>
+                  <td class="ov-table__mono">dev.example.com</td>
+                  <td><span class="ov-badge ov-badge--inactive">Inactive</span></td>
+                  <td>—</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="ov-alert ov-alert--danger ov-mt-6" role="alert">
+            <strong>⚠ Danger:</strong> URL flagged for phishing. Do not visit.
+          </div>
+
+          <pre class="ov-mono-block ov-mt-6">$ whois example.com
+Registrar: RESERVED-Internet Assigned Numbers Authority
+Creation Date: 1995-08-14</pre
+          >
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
