@@ -151,6 +151,15 @@ _ICON_PATHS = {
         '<circle cx="10" cy="12" r="2"/>'
         '<path d="m20 17-1.296-1.296a2.41 2.41 0 0 0-3.408 0L9 22"/>'
     ),
+    "building": (
+        '<rect width="16" height="20" x="4" y="2" rx="2" ry="2"/>'
+        '<path d="M9 22v-4h6v4"/>'
+        '<path d="M8 6h.01"/><path d="M16 6h.01"/>'
+        '<path d="M12 6h.01"/><path d="M12 10h.01"/>'
+        '<path d="M12 14h.01"/><path d="M16 10h.01"/>'
+        '<path d="M16 14h.01"/><path d="M8 10h.01"/>'
+        '<path d="M8 14h.01"/>'
+    ),
 }
 
 _SIZE_PX = {

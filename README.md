@@ -15,6 +15,7 @@ Web platform for ethical, passive OSINT — built for iSeeWaves / FYP specificat
 | 6. Username OSINT | ✅ Complete |
 | 7. URL Risk | ✅ Complete |
 | 8. Password Hasher | ✅ Complete |
+| 9. Company / Domain Footprint | ✅ Complete |
 
 ## Quick start
 
@@ -40,6 +41,7 @@ See `design-system/DESIGN_SYSTEM.md`. App templates use `ov-*` classes via `them
 - [Module 6 — Username OSINT](docs/MODULE_06_USERNAME.md)
 - [Module 7 — URL Risk](docs/MODULE_07_URL_RISK.md)
 - [Module 8 — Password Hasher](docs/MODULE_08_PASSWORD_HASHER.md)
+- [Module 9 — Company / Domain Footprint](docs/MODULE_09_ORG_FOOTPRINT.md)
 
 ### Email Breach (XposedOrNot)
 

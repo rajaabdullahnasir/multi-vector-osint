@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ record.domain }} — Company Footprint{% endblock %}
+{% block page_heading %}Company footprint report{% endblock %}
+{% block content %}
+{% url 'org_footprint_osint:export_json' record.pk as export_url %}
+{% url 'org_footprint_osint:home' as back_url %}
+{% url 'org_footprint_osint:delete' record.pk as delete_url %}
+{% include "partials/report_bar.html" with report_label="Footprint" report_title=record.domain report_meta=record.created_at export_url=export_url back_url=back_url delete_url=delete_url delete_confirm="Delete this scan?" %}
+
+{% if record.status == 'failed' %}
+<div class="ov-alert ov-alert--danger">{{ record.error_message }}</div>
+{% else %}
+
+<div class="ov-report-meta">
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Organization</div>
+    <div class="ov-report-meta__value">{{ record.org_name|default:"—" }}</div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">SPF</div>
+    <div class="ov-report-meta__value">{{ record.spf_status|default:"—" }}</div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">DMARC policy</div>
+    <div class="ov-report-meta__value">{{ record.dmarc_status|default:"—" }}</div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Security headers</div>
+    <div class="ov-report-meta__value">{{ record.security_header_score }}/4</div>
+  </div>
+</div>
+
+{% if risk_flags %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-6);">
+  <h3 class="ov-panel__title">Risk flags</h3>
+  <ul class="ov-text-secondary" style="margin: var(--ov-space-4) 0 0; padding-left: 1.1rem; line-height: 1.7; color: var(--ov-color-warning);">
+    {% for flag in risk_flags %}
+    <li>{{ flag }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% for section_name, section_fields in metadata_sections %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);" data-module="org-footprint">
+  <h3 class="ov-panel__title">{{ section_name }}</h3>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <tbody>
+        {% for label, val in section_fields.items %}
+        <tr>
+          <th style="width: 36%; font-weight: 500;">{{ label }}</th>
+          <td style="word-break: break-word;">{{ val }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% endif %}
+{% endblock %}

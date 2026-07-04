@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "url_risk_osint.apps.UrlRiskOsintConfig",
     "password_hasher_osint.apps.PasswordHasherOsintConfig",
     "password_breach_osint.apps.PasswordBreachOsintConfig",
+    "org_footprint_osint.apps.OrgFootprintOsintConfig",
 ]
 
 MIDDLEWARE = [
@@ -136,6 +137,10 @@ PASSWORD_BREACH_MAX_LENGTH = 128
 
 # Module 8 — Password Hasher (SRS-31–32)
 PASSWORD_HASHER_MAX_INPUT_LENGTH = 256
+
+# Module 9 — Company / Domain Footprint (passive WHOIS + DNS + HTTP headers)
+ORG_FOOTPRINT_HTTP_TIMEOUT_SECONDS = 6.0
+ORG_FOOTPRINT_DNS_TIMEOUT_SECONDS = 5.0
 
 # Account lockout (SRS-12)
 AUTH_LOCKOUT_MAX_ATTEMPTS = 5

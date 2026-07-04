@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from email_breach_osint.models import EmailBreachCheck
 from image_osint.models import ImageAnalysis
+from org_footprint_osint.models import OrgFootprint
 from password_breach_osint.models import PasswordBreachCheck
 from password_hasher_osint.models import HashJob
 from subdomain_osint.models import SubdomainScan
@@ -27,6 +28,7 @@ MODULE_MODELS = {
     "username": ("Username OSINT", UsernameLookup),
     "url-risk": ("URL Risk", UrlRiskCheck),
     "hasher": ("Password Hasher", HashJob),
+    "org-footprint": ("Company Footprint", OrgFootprint),
 }
 
 
@@ -107,7 +109,7 @@ def build_dashboard_analytics(user) -> dict:
         },
         {
             "label": "Active modules",
-            "value": f"{modules_used}/8",
+            "value": f"{modules_used}/9",
             "hint": "Modules you have used at least once",
             "icon": "layers",
         },

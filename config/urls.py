@@ -30,6 +30,10 @@ urlpatterns = [
         "modules/hasher/",
         include(("password_hasher_osint.urls", "password_hasher_osint")),
     ),
+    path(
+        "modules/org-footprint/",
+        include(("org_footprint_osint.urls", "org_footprint_osint")),
+    ),
 ]
 
 if settings.DEBUG:

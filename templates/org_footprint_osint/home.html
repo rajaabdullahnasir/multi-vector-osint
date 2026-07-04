@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% load static ov_icons %}
+{% block title %}Company Footprint — OSINT Vector{% endblock %}
+{% block page_heading %}Company &amp; domain footprint{% endblock %}
+{% block page_lead %}<p class="ov-page-lead">Passive org identity, mail-security posture, HTTP headers, and official platform presence — no login, no scraping.</p>{% endblock %}
+{% block content %}
+<div class="ov-workspace">
+  <section class="ov-panel" data-module="org-footprint">
+    <header class="ov-panel__head">
+      <h2 class="ov-panel__title">Footprint scan</h2>
+      <p class="ov-panel__lead">Enter a company's domain to build a passive footprint report.</p>
+    </header>
+    <form
+      method="post"
+      action="{% url 'org_footprint_osint:scan' %}"
+      data-org-footprint-form
+      data-scan-url="{% url 'org_footprint_osint:scan' %}"
+      novalidate
+    >
+      {% csrf_token %}
+      <div class="ov-field">
+        <label class="ov-field__label" for="id_domain">{{ form.domain.label }}</label>
+        {{ form.domain }}
+        {% if form.domain.errors %}
+        <p class="ov-caption js-domain-error" style="color: var(--ov-color-danger);">{{ form.domain.errors.0 }}</p>
+        {% else %}
+        <p class="ov-caption">{{ form.domain.help_text }}</p>
+        {% endif %}
+      </div>
+      <button type="submit" class="ov-btn ov-btn--primary ov-btn--icon" id="org-footprint-submit-btn">
+        {% ov_icon "building" size="sm" %}
+        <span>Run footprint scan</span>
+      </button>
+    </form>
+  </section>
+</div>
+
+<div id="org-footprint-loader" class="ov-loader-overlay" aria-hidden="true">
+  <div class="ov-loader-card">
+    <div class="ov-spinner" aria-hidden="true"></div>
+    <p class="ov-loader__title">Building company footprint</p>
+    <p class="ov-loader__domain js-loader-domain"></p>
+    <p class="ov-loader__status js-loader-status">Starting…</p>
+    <div class="ov-progress"><div class="ov-progress__bar ov-progress__bar--indeterminate"></div></div>
+  </div>
+</div>
+
+{% if records %}
+<section class="ov-section">
+  <div class="ov-section__head">
+    <h2 class="ov-section__title">Recent scans</h2>
+  </div>
+  <div class="ov-table-wrap" id="org-footprint-table">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>Domain</th>
+          <th>Organization</th>
+          <th>SPF</th>
+          <th>DMARC</th>
+          <th>Security headers</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in records %}
+        <tr>
+          <td class="ov-table__mono">{{ row.domain }}</td>
+          <td>{{ row.org_name|default:"—" }}</td>
+          <td>
+            {% if row.spf_status == 'present' %}
+            <span class="ov-status ov-status--ok">Present</span>
+            {% else %}
+            <span class="ov-status ov-status--bad">Missing</span>
+            {% endif %}
+          </td>
+          <td>{{ row.dmarc_status|default:"—" }}</td>
+          <td>{{ row.security_header_score }}/4</td>
+          <td>
+            {% if row.status == 'completed' %}
+            <span class="ov-status ov-status--ok">Done</span>
+            {% elif row.status == 'failed' %}
+            <span class="ov-status ov-status--bad">Failed</span>
+            {% else %}
+            <span class="ov-status ov-status--neutral">Pending</span>
+            {% endif %}
+          </td>
+          <td><a class="ov-link ov-link--icon" href="{% url 'org_footprint_osint:detail' row.pk %}">{% ov_icon "eye" size="sm" %}<span>Open</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<script src="{% static 'org_footprint_osint/org_footprint.js' %}"></script>
+{% endblock %}

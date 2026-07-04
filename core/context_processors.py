@@ -73,6 +73,15 @@ MODULE_NAV = [
         "abbr": "HS",
         "available": True,
     },
+    {
+        "slug": "org-footprint",
+        "name": "Company Footprint",
+        "description": "WHOIS org identity, mail security posture, HTTP headers, platform presence",
+        "url_name": "org_footprint_osint:home",
+        "icon": "building",
+        "abbr": "CF",
+        "available": True,
+    },
 ]
 
 NAMESPACE_TO_MODULE_SLUG = {
@@ -84,6 +93,7 @@ NAMESPACE_TO_MODULE_SLUG = {
     "username_osint": "username",
     "url_risk_osint": "url-risk",
     "password_hasher_osint": "hasher",
+    "org_footprint_osint": "org-footprint",
 }
 
 MODULE_ICON_BY_SLUG = {item["slug"]: item["icon"] for item in MODULE_NAV}

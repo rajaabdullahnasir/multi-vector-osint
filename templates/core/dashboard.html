@@ -585,6 +585,46 @@
 
   {% endif %}
 
+  {% if recent_org_footprints %}
+
+  <div class="ov-table-wrap">
+
+    <table class="ov-table">
+
+      <thead>
+
+        <tr><th colspan="4">Company Footprint</th></tr>
+
+        <tr><th>Domain</th><th>Organization</th><th>Date</th><th></th></tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for item in recent_org_footprints %}
+
+        <tr>
+
+          <td class="ov-table__mono">{{ item.domain }}</td>
+
+          <td>{{ item.org_name|default:"—" }}</td>
+
+          <td class="ov-caption">{{ item.created_at }}</td>
+
+          <td><a class="ov-link ov-link--icon" href="{% url 'org_footprint_osint:detail' item.pk %}">{% ov_icon "eye" size="sm" %}<span>View</span></a></td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  {% endif %}
+
 </section>
 
 {% endif %}
