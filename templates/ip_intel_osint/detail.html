@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ record.query_input }} — IP Intelligence{% endblock %}
+{% block page_heading %}IP intelligence report{% endblock %}
+{% block content %}
+{% url 'ip_intel_osint:export_json' record.pk as export_url %}
+{% url 'ip_intel_osint:home' as back_url %}
+{% url 'ip_intel_osint:delete' record.pk as delete_url %}
+{% include "partials/report_bar.html" with report_label="IP Intel" report_title=record.query_input report_meta=record.created_at export_url=export_url back_url=back_url delete_url=delete_url delete_confirm="Delete this lookup?" %}
+
+{% if record.status == 'failed' %}
+<div class="ov-alert ov-alert--danger">{{ record.error_message }}</div>
+{% else %}
+
+<div class="ov-report-meta">
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Resolved IP</div>
+    <div class="ov-report-meta__value">{{ record.ip_address|default:"—" }}</div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Location</div>
+    <div class="ov-report-meta__value">{{ record.city|default:"" }}{% if record.city and record.country %}, {% endif %}{{ record.country|default:"—" }}</div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">ISP / ASN</div>
+    <div class="ov-report-meta__value">{{ record.isp|default:"—" }}</div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Proxy / Hosting</div>
+    <div class="ov-report-meta__value">
+      {% if record.is_proxy_or_vpn or record.is_hosting %}
+      <span class="ov-status ov-status--bad">Flagged</span>
+      {% else %}
+      <span class="ov-status ov-status--ok">Clean</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if risk_flags %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-6);">
+  <h3 class="ov-panel__title">Risk flags</h3>
+  <ul class="ov-text-secondary" style="margin: var(--ov-space-4) 0 0; padding-left: 1.1rem; line-height: 1.7; color: var(--ov-color-warning);">
+    {% for flag in risk_flags %}
+    <li>{{ flag }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if record.latitude and record.longitude %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);">
+  <h3 class="ov-panel__title">Map</h3>
+  <p class="ov-caption" style="margin-top: var(--ov-space-2);">
+    Approximate location — IP geolocation is city-level at best and should not be treated as precise.
+  </p>
+  <a
+    class="ov-link ov-link--icon"
+    style="margin-top: var(--ov-space-3);"
+    href="https://www.openstreetmap.org/?mlat={{ record.latitude }}&mlon={{ record.longitude }}#map=10/{{ record.latitude }}/{{ record.longitude }}"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    View on OpenStreetMap ({{ record.latitude }}, {{ record.longitude }})
+  </a>
+</div>
+{% endif %}
+
+{% for section_name, section_fields in metadata_sections %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);" data-module="ip-intel">
+  <h3 class="ov-panel__title">{{ section_name }}</h3>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <tbody>
+        {% for label, val in section_fields.items %}
+        <tr>
+          <th style="width: 36%; font-weight: 500;">{{ label }}</th>
+          <td style="word-break: break-word;">{{ val }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% endif %}
+{% endblock %}

@@ -16,6 +16,7 @@ Web platform for ethical, passive OSINT — built for iSeeWaves / FYP specificat
 | 7. URL Risk | ✅ Complete |
 | 8. Password Hasher | ✅ Complete |
 | 9. Company / Domain Footprint | ✅ Complete |
+| 10. Geolocation / IP Intelligence | ✅ Complete |
 
 ## Quick start
 
@@ -42,6 +43,7 @@ See `design-system/DESIGN_SYSTEM.md`. App templates use `ov-*` classes via `them
 - [Module 7 — URL Risk](docs/MODULE_07_URL_RISK.md)
 - [Module 8 — Password Hasher](docs/MODULE_08_PASSWORD_HASHER.md)
 - [Module 9 — Company / Domain Footprint](docs/MODULE_09_ORG_FOOTPRINT.md)
+- [Module 10 — Geolocation / IP Intelligence](docs/MODULE_10_IP_INTEL.md)
 
 ### Email Breach (XposedOrNot)
 

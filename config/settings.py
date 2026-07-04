@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "password_hasher_osint.apps.PasswordHasherOsintConfig",
     "password_breach_osint.apps.PasswordBreachOsintConfig",
     "org_footprint_osint.apps.OrgFootprintOsintConfig",
+    "ip_intel_osint.apps.IpIntelOsintConfig",
 ]
 
 MIDDLEWARE = [
@@ -141,6 +142,17 @@ PASSWORD_HASHER_MAX_INPUT_LENGTH = 256
 # Module 9 — Company / Domain Footprint (passive WHOIS + DNS + HTTP headers)
 ORG_FOOTPRINT_HTTP_TIMEOUT_SECONDS = 6.0
 ORG_FOOTPRINT_DNS_TIMEOUT_SECONDS = 5.0
+
+# Module 10 — Geolocation / IP Intelligence (RDAP + free geolocation)
+RDAP_API_BASE = os.environ.get("RDAP_API_BASE", "https://rdap.org")
+RDAP_USER_AGENT = "OSINT-Vector-Analyzer-FYP"
+RDAP_MIN_REQUEST_INTERVAL = 1.0
+
+IP_GEOLOCATION_API_BASE = os.environ.get(
+    "IP_GEOLOCATION_API_BASE", "http://ip-api.com/json"
+)
+IP_GEOLOCATION_USER_AGENT = "OSINT-Vector-Analyzer-FYP"
+IP_GEOLOCATION_MIN_REQUEST_INTERVAL = 1.4
 
 # Account lockout (SRS-12)
 AUTH_LOCKOUT_MAX_ATTEMPTS = 5

@@ -34,6 +34,10 @@ urlpatterns = [
         "modules/org-footprint/",
         include(("org_footprint_osint.urls", "org_footprint_osint")),
     ),
+    path(
+        "modules/ip-intel/",
+        include(("ip_intel_osint.urls", "ip_intel_osint")),
+    ),
 ]
 
 if settings.DEBUG:

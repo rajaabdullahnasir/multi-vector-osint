@@ -625,6 +625,46 @@
 
   {% endif %}
 
+  {% if recent_ip_intel %}
+
+  <div class="ov-table-wrap">
+
+    <table class="ov-table">
+
+      <thead>
+
+        <tr><th colspan="4">IP Intelligence</th></tr>
+
+        <tr><th>Query</th><th>Location</th><th>Date</th><th></th></tr>
+
+      </thead>
+
+      <tbody>
+
+        {% for item in recent_ip_intel %}
+
+        <tr>
+
+          <td class="ov-table__mono">{{ item.query_input }}</td>
+
+          <td>{{ item.city|default:"" }}{% if item.city and item.country %}, {% endif %}{{ item.country|default:"—" }}</td>
+
+          <td class="ov-caption">{{ item.created_at }}</td>
+
+          <td><a class="ov-link ov-link--icon" href="{% url 'ip_intel_osint:detail' item.pk %}">{% ov_icon "eye" size="sm" %}<span>View</span></a></td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  {% endif %}
+
 </section>
 
 {% endif %}

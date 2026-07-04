@@ -82,6 +82,15 @@ MODULE_NAV = [
         "abbr": "CF",
         "available": True,
     },
+    {
+        "slug": "ip-intel",
+        "name": "IP Intelligence",
+        "description": "Geolocation, ASN/ISP, RDAP registration, and proxy/hosting detection",
+        "url_name": "ip_intel_osint:home",
+        "icon": "map-pin",
+        "abbr": "IP",
+        "available": True,
+    },
 ]
 
 NAMESPACE_TO_MODULE_SLUG = {
@@ -94,6 +103,7 @@ NAMESPACE_TO_MODULE_SLUG = {
     "url_risk_osint": "url-risk",
     "password_hasher_osint": "hasher",
     "org_footprint_osint": "org-footprint",
+    "ip_intel_osint": "ip-intel",
 }
 
 MODULE_ICON_BY_SLUG = {item["slug"]: item["icon"] for item in MODULE_NAV}
