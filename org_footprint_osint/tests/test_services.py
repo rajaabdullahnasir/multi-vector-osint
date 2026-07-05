@@ -189,3 +189,37 @@ class OrgFootprintAnalyzerDisplayTests(SimpleTestCase):
         identity_section = report.sections["Organization Identity"]
         self.assertEqual(identity_section["Organization"], "Acme Inc.")
         self.assertNotIn("Notice", identity_section)
+
+    def test_platform_match_never_claims_ownership_confirmed(self):
+        """
+        A matching slug (e.g. github.com/example) is evidence a page exists,
+        not evidence this organization owns it — common/short names are
+        routinely squatted by unrelated accounts. The report must not use
+        language like "Confirmed" that implies verified ownership.
+        """
+        from org_footprint_osint.services.social_presence import PlatformCheck
+
+        self.analyzer.identity_lookup.lookup.return_value = OrgIdentity(success=False, error="n/a")
+        self.analyzer.mail_analyzer.analyze.return_value = MailSecurityResult(
+            success=True, domain="example.com"
+        )
+        self.analyzer.http_fingerprinter.fetch.return_value = HttpFingerprintResult(success=False, error="n/a")
+        self.analyzer.social_checker.check.return_value = Mock(
+            checks=[
+                PlatformCheck(
+                    platform="GitHub",
+                    url="https://github.com/example",
+                    found=True,
+                    verifiable=True,
+                    status_code=200,
+                )
+            ],
+            slug="example",
+            found_count=1,
+        )
+
+        report = self.analyzer.analyze("example.com")
+        github_text = report.sections["Official Platform Presence"]["GitHub"]
+        self.assertNotIn("Confirmed", github_text)
+        self.assertIn("verify", github_text.lower())
+        self.assertIn("Method", report.sections["Official Platform Presence"])

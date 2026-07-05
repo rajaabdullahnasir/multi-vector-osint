@@ -124,13 +124,19 @@ class OrgFootprintAnalyzer:
         social = self.social_checker.check(domain)
         sections["Official Platform Presence"] = {
             check.platform: (
-                f"Confirmed — {check.url}"
+                f"Handle exists — {check.url} (verify it belongs to this "
+                "organization before citing; a matching slug is not proof "
+                "of ownership)"
                 if check.found
-                else ("Unverifiable (bot-protected)" if not check.verifiable else "Not found")
+                else ("Unverifiable (bot-protected)" if not check.verifiable else "No matching handle found")
             )
             for check in social.checks
         }
         sections["Official Platform Presence"]["Guessed handle"] = social.slug
+        sections["Official Platform Presence"]["Method"] = (
+            "Slug guessed from domain name and checked for existence only — "
+            "this does not confirm organizational ownership"
+        )
 
         risk_flags = self._derive_risk_flags(identity, mail, http_result)
 
