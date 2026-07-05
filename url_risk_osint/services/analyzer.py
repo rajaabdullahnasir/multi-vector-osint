@@ -9,6 +9,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 from .blacklist import check_blacklist
+from .dnsbl_client import DnsblClient
 from .lexical_analyzer import analyze_lexical
 from .risk_scorer import RISK_DANGEROUS, RISK_SAFE, RISK_SUSPICIOUS, score_risk
 from .url_validator import UrlValidator
@@ -47,6 +48,7 @@ class UrlRiskReport:
 class UrlRiskAnalyzer:
     def __init__(self):
         self.validator = UrlValidator()
+        self.dnsbl_client = DnsblClient()
 
     def analyze(self, url_input: str) -> UrlRiskReport:
         validation = self.validator.validate(url_input)
@@ -69,24 +71,46 @@ class UrlRiskAnalyzer:
 
         lexical = analyze_lexical(url)
         blacklist = check_blacklist(url)
-        assessment = score_risk(lexical, blacklist)
+        dnsbl = self.dnsbl_client.check(parsed.hostname or "")
+        assessment = score_risk(lexical, blacklist, dnsbl)
 
         sections: dict[str, Any] = {
             "Target": {
                 "URL": url,
-                "Method": "Lexical analysis + static blacklist",
+                "Method": "Lexical analysis + static blacklist + live DNSBL reputation (Spamhaus DBL, SURBL)",
             },
             "Summary": {
                 "Risk level": assessment.risk_level.title(),
                 "Risk score": str(assessment.risk_score),
                 "Lexical score": str(assessment.lexical_score),
                 "Blacklist score": str(assessment.blacklist_score),
+                "DNSBL score": str(assessment.dnsbl_score),
                 "Lexical findings": str(len(lexical)),
                 "Blacklist hits": str(len(blacklist)),
             },
         }
 
-        risk_flags = self._derive_risk_flags(assessment.risk_level, lexical, blacklist)
+        if dnsbl.checked:
+            if dnsbl.listed:
+                sections["Live Threat Feed (DNSBL)"] = {
+                    "Status": "LISTED",
+                    "Lists": ", ".join(dnsbl.lists_hit),
+                    "Categories": ", ".join(dnsbl.categories) or "—",
+                }
+            elif dnsbl.rate_limited:
+                sections["Live Threat Feed (DNSBL)"] = {
+                    "Status": "Unavailable — rate limited by Spamhaus's free tier right now.",
+                }
+            else:
+                sections["Live Threat Feed (DNSBL)"] = {
+                    "Status": "Not listed on Spamhaus DBL or SURBL.",
+                }
+        else:
+            sections["Live Threat Feed (DNSBL)"] = {
+                "Status": dnsbl.error or "Could not be checked (no resolvable host).",
+            }
+
+        risk_flags = self._derive_risk_flags(assessment.risk_level, lexical, blacklist, dnsbl)
 
         return UrlRiskReport(
             success=True,
@@ -100,19 +124,24 @@ class UrlRiskAnalyzer:
             parsed=parsed_info,
         )
 
-    def _derive_risk_flags(self, level: str, lexical, blacklist) -> list[str]:
+    def _derive_risk_flags(self, level: str, lexical, blacklist, dnsbl=None) -> list[str]:
         flags: list[str] = []
+        if dnsbl and dnsbl.listed:
+            categories = ", ".join(dnsbl.categories) or "unspecified abuse"
+            flags.append(
+                f"Live threat feed match: listed on {', '.join(dnsbl.lists_hit)} ({categories})."
+            )
         if level == RISK_DANGEROUS:
             flags.append("High risk — avoid visiting; possible phishing or malware.")
         elif level == RISK_SUSPICIOUS:
             flags.append("Suspicious indicators present — verify destination before use.")
         else:
-            flags.append("No strong risk indicators from lexical/blacklist checks.")
+            flags.append("No strong risk indicators from lexical/blacklist/DNSBL checks.")
         if blacklist:
             flags.append(f"{len(blacklist)} blacklist rule(s) matched.")
         if lexical:
             flags.append(f"{len(lexical)} lexical heuristic(s) triggered.")
         flags.append(
-            "Static analysis only — does not replace VirusTotal or live sandboxing."
+            "Static + DNSBL analysis only — does not replace VirusTotal or live sandboxing."
         )
         return flags

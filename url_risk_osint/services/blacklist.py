@@ -1,5 +1,10 @@
 """
-Static blacklist checks — domains, patterns, and phishing keywords (SRS-28).
+Static heuristic checks — domains, patterns, and phishing keywords (SRS-28).
+
+This is a small illustrative pattern list, not a comprehensive or live threat
+feed. Real-time reputation comes from dnsbl_client.py (Spamhaus DBL, SURBL) —
+this module's job is fast, no-network lexical/structural pattern matching
+that complements that live check.
 """
 
 from __future__ import annotations
