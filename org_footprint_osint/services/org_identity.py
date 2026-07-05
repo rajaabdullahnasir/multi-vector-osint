@@ -27,6 +27,7 @@ class OrgIdentity:
     country: str = ""
     registrar: str = ""
     whois_privacy: bool = False
+    registry_withholds_data: bool = False
     raw_text: str = ""
     error: str | None = None
 
@@ -58,11 +59,25 @@ class OrgIdentityLookup:
             "redacted" in org_name.lower() if org_name else False
         )
 
+        # Some ccTLD registries (e.g. .pk/PKNIC) only ever publish nameservers,
+        # dates, and status at the WHOIS protocol level — registrant/org data
+        # is withheld by policy, not lost by our parser. Detect this so the UI
+        # can say so plainly instead of showing a bare "not found".
+        registry_withholds_data = (
+            not org_name
+            and not country
+            and not any(
+                marker in flat
+                for marker in ("Registrant Name", "Registrant Email", "Admin Email")
+            )
+        )
+
         return OrgIdentity(
             success=True,
             org_name=org_name,
             country=country,
             registrar=registrar,
             whois_privacy=privacy,
+            registry_withholds_data=registry_withholds_data,
             raw_text=result.raw_text,
         )

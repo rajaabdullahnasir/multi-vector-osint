@@ -1,0 +1,285 @@
+From ea836ac92e6325001b5d67d6e750438b6a25142f Mon Sep 17 00:00:00 2001
+From: Abdullah Nasir <abdullah@iseewaves.com>
+Date: Sun, 5 Jul 2026 06:26:55 +0000
+Subject: [PATCH] Fix WHOIS org-data honesty and social presence false
+ positives
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+1. whois_parser.py: add missing field-alias variants (British
+   'Organisation' spelling, registrant/admin/tech organization variants).
+   These were simply absent, so any registry using these labels silently
+   returned nothing.
+
+2. org_identity.py / analyzer.py: detect when a registry (e.g. PKNIC/.pk)
+   deliberately withholds registrant data by policy, and show an honest
+   notice instead of a bare '-' that looked like a broken lookup. Confirmed
+   via PKNIC's own published policy that .pk WHOIS only ever exposes
+   nameservers/dates/status, never registrant/org.
+
+3. social_presence.py: real bug — LinkedIn/Facebook/Instagram/Crunchbase
+   serve HTTP 200 login-wall/soft-404 pages for almost any slug regardless
+   of whether the company page exists. The 'unverifiable platform' branch
+   was computing found the identical way as the verifiable branch, so a
+   200 always got reported as 'Confirmed' even though it proves nothing.
+   Fixed so unverifiable platforms can never be marked found from status
+   code alone -- only GitHub/X (which return real 404s) can.
+
+Caught live: scanning iseewaves.pk showed LinkedIn/Facebook/Instagram all
+'Confirmed' regardless of whether those pages actually existed.
+
+6 new regression tests pinning down both fixes. 84/84 total passing.
+---
+ org_footprint_osint/services/analyzer.py      | 24 +++--
+ org_footprint_osint/services/org_identity.py  | 15 +++
+ .../services/social_presence.py               | 11 ++-
+ org_footprint_osint/tests/test_services.py    | 97 ++++++++++++++++++-
+ whois_osint/services/whois_parser.py          | 12 +++
+ 5 files changed, 148 insertions(+), 11 deletions(-)
+
+diff --git a/org_footprint_osint/services/analyzer.py b/org_footprint_osint/services/analyzer.py
+index 4704229..04ec527 100644
+--- a/org_footprint_osint/services/analyzer.py
++++ b/org_footprint_osint/services/analyzer.py
+@@ -75,12 +75,22 @@ class OrgFootprintAnalyzer:
+ 
+         identity = self.identity_lookup.lookup(domain)
+         if identity.success:
+-            sections["Organization Identity"] = {
+-                "Organization": identity.org_name or "—",
+-                "Country": identity.country or "—",
+-                "Registrar": identity.registrar or "—",
+-                "WHOIS Privacy": "Enabled" if identity.whois_privacy else "Not detected",
+-            }
++            if identity.registry_withholds_data:
++                sections["Organization Identity"] = {
++                    "Notice": (
++                        "This domain's registry does not publish registrant/organization "
++                        "details via WHOIS (common for several ccTLDs). Only nameservers, "
++                        "dates, and status are available."
++                    ),
++                    "Registrar": identity.registrar or "—",
++                }
++            else:
++                sections["Organization Identity"] = {
++                    "Organization": identity.org_name or "—",
++                    "Country": identity.country or "—",
++                    "Registrar": identity.registrar or "—",
++                    "WHOIS Privacy": "Enabled" if identity.whois_privacy else "Not detected",
++                }
+         else:
+             sections["Organization Identity"] = {"Notice": identity.error or "WHOIS lookup failed."}
+ 
+@@ -116,7 +126,7 @@ class OrgFootprintAnalyzer:
+             check.platform: (
+                 f"Confirmed — {check.url}"
+                 if check.found
+-                else ("Unverifiable (bot-protected)" if not check.verifiable and check.status_code != 200 else "Not found")
++                else ("Unverifiable (bot-protected)" if not check.verifiable else "Not found")
+             )
+             for check in social.checks
+         }
+diff --git a/org_footprint_osint/services/org_identity.py b/org_footprint_osint/services/org_identity.py
+index a1c2a85..bcc85f6 100644
+--- a/org_footprint_osint/services/org_identity.py
++++ b/org_footprint_osint/services/org_identity.py
+@@ -27,6 +27,7 @@ class OrgIdentity:
+     country: str = ""
+     registrar: str = ""
+     whois_privacy: bool = False
++    registry_withholds_data: bool = False
+     raw_text: str = ""
+     error: str | None = None
+ 
+@@ -58,11 +59,25 @@ class OrgIdentityLookup:
+             "redacted" in org_name.lower() if org_name else False
+         )
+ 
++        # Some ccTLD registries (e.g. .pk/PKNIC) only ever publish nameservers,
++        # dates, and status at the WHOIS protocol level — registrant/org data
++        # is withheld by policy, not lost by our parser. Detect this so the UI
++        # can say so plainly instead of showing a bare "not found".
++        registry_withholds_data = (
++            not org_name
++            and not country
++            and not any(
++                marker in flat
++                for marker in ("Registrant Name", "Registrant Email", "Admin Email")
++            )
++        )
++
+         return OrgIdentity(
+             success=True,
+             org_name=org_name,
+             country=country,
+             registrar=registrar,
+             whois_privacy=privacy,
++            registry_withholds_data=registry_withholds_data,
+             raw_text=result.raw_text,
+         )
+diff --git a/org_footprint_osint/services/social_presence.py b/org_footprint_osint/services/social_presence.py
+index 5d3146f..b7535c5 100644
+--- a/org_footprint_osint/services/social_presence.py
++++ b/org_footprint_osint/services/social_presence.py
+@@ -79,11 +79,16 @@ class SocialPresenceChecker:
+                 )
+                 status_code = response.status_code
+                 if verifiable:
++                    # GitHub and X return a real 404 for handles that don't
++                    # exist, so a clean 200 is a trustworthy positive signal.
+                     found = status_code == 200
+                 else:
+-                    # Bot-blocking platforms: treat only a clean 200 as a weak
+-                    # positive signal; anything else stays "unverifiable".
+-                    found = status_code == 200
++                    # LinkedIn/Facebook/Instagram/Crunchbase serve a 200
++                    # login-wall or soft-404 page for almost any slug,
++                    # whether or not the company page actually exists — a
++                    # 200 here is NOT evidence of existence. Never claim
++                    # "found" for these; always surface as unverifiable.
++                    found = False
+             except requests.RequestException:
+                 status_code = None
+ 
+diff --git a/org_footprint_osint/tests/test_services.py b/org_footprint_osint/tests/test_services.py
+index 98a4bdd..ac1d259 100644
+--- a/org_footprint_osint/tests/test_services.py
++++ b/org_footprint_osint/tests/test_services.py
+@@ -1,10 +1,12 @@
++from unittest.mock import Mock, patch
++
+ from django.test import SimpleTestCase
+ 
+ from org_footprint_osint.services.analyzer import OrgFootprintAnalyzer
+ from org_footprint_osint.services.domain_validator import DomainValidator
+ from org_footprint_osint.services.http_fingerprint import HttpFingerprintResult
+ from org_footprint_osint.services.mail_security import MailSecurityAnalyzer, MailSecurityResult
+-from org_footprint_osint.services.org_identity import OrgIdentity
++from org_footprint_osint.services.org_identity import OrgIdentity, OrgIdentityLookup
+ from org_footprint_osint.services.social_presence import SocialPresenceChecker
+ 
+ 
+@@ -94,3 +96,96 @@ class RiskFlagDerivationTests(SimpleTestCase):
+         http_result = HttpFingerprintResult(success=True, security_headers_missing=[])
+         flags = self.analyzer._derive_risk_flags(identity, mail, http_result)
+         self.assertTrue(any("privacy-protected" in f for f in flags))
++
++
++class SocialPresenceBotProtectedPlatformTests(SimpleTestCase):
++    """
++    Regression tests: LinkedIn/Facebook/Instagram/Crunchbase serve a 200
++    login-wall or soft-404 page for almost any slug, whether or not the
++    company page exists. A 200 from these must never be reported as
++    "Confirmed" — only genuinely verifiable platforms (GitHub, X) can be.
++    """
++
++    def _mock_response(self, status_code):
++        mock_resp = Mock()
++        mock_resp.status_code = status_code
++        return mock_resp
++
++    @patch("org_footprint_osint.services.social_presence.requests.get")
++    def test_linkedin_200_is_never_confirmed(self, mock_get):
++        mock_get.return_value = self._mock_response(200)
++        result = SocialPresenceChecker().check("example.com")
++        linkedin = next(c for c in result.checks if c.platform == "LinkedIn (company)")
++        self.assertFalse(linkedin.found)
++        self.assertFalse(linkedin.verifiable)
++
++    @patch("org_footprint_osint.services.social_presence.requests.get")
++    def test_github_200_is_confirmed(self, mock_get):
++        mock_get.return_value = self._mock_response(200)
++        result = SocialPresenceChecker().check("example.com")
++        github = next(c for c in result.checks if c.platform == "GitHub")
++        self.assertTrue(github.found)
++        self.assertTrue(github.verifiable)
++
++    @patch("org_footprint_osint.services.social_presence.requests.get")
++    def test_github_404_is_not_found(self, mock_get):
++        mock_get.return_value = self._mock_response(404)
++        result = SocialPresenceChecker().check("example.com")
++        github = next(c for c in result.checks if c.platform == "GitHub")
++        self.assertFalse(github.found)
++
++    @patch("org_footprint_osint.services.social_presence.requests.get")
++    def test_found_count_excludes_unverifiable_platforms(self, mock_get):
++        # Every platform returns 200 — only verifiable ones should count.
++        mock_get.return_value = self._mock_response(200)
++        result = SocialPresenceChecker().check("example.com")
++        verifiable_names = {"GitHub", "X / Twitter"}
++        expected = sum(1 for c in result.checks if c.platform in verifiable_names)
++        self.assertEqual(result.found_count, expected)
++
++
++class OrgFootprintAnalyzerDisplayTests(SimpleTestCase):
++    """Covers the section-rendering logic in analyzer.analyze(), not just the flags."""
++
++    def setUp(self):
++        self.analyzer = OrgFootprintAnalyzer.__new__(OrgFootprintAnalyzer)
++        self.analyzer.validator = DomainValidator()
++        self.analyzer.identity_lookup = Mock()
++        self.analyzer.mail_analyzer = Mock()
++        self.analyzer.http_fingerprinter = Mock()
++        self.analyzer.social_checker = Mock()
++
++    def test_registry_withholding_data_shows_honest_notice_not_blank_dash(self):
++        self.analyzer.identity_lookup.lookup.return_value = OrgIdentity(
++            success=True, registry_withholds_data=True, registrar="PKNIC"
++        )
++        self.analyzer.mail_analyzer.analyze.return_value = MailSecurityResult(
++            success=True, domain="example.pk"
++        )
++        self.analyzer.http_fingerprinter.fetch.return_value = HttpFingerprintResult(success=False, error="n/a")
++        self.analyzer.social_checker.check.return_value = Mock(checks=[], slug="example")
++
++        report = self.analyzer.analyze("example.pk")
++        identity_section = report.sections["Organization Identity"]
++        self.assertIn("Notice", identity_section)
++        self.assertIn("does not publish", identity_section["Notice"])
++        self.assertNotIn("Organization", identity_section)
++
++    def test_normal_registry_shows_full_fields(self):
++        self.analyzer.identity_lookup.lookup.return_value = OrgIdentity(
++            success=True,
++            registry_withholds_data=False,
++            org_name="Acme Inc.",
++            country="US",
++            registrar="GoDaddy",
++        )
++        self.analyzer.mail_analyzer.analyze.return_value = MailSecurityResult(
++            success=True, domain="example.com"
++        )
++        self.analyzer.http_fingerprinter.fetch.return_value = HttpFingerprintResult(success=False, error="n/a")
++        self.analyzer.social_checker.check.return_value = Mock(checks=[], slug="example")
++
++        report = self.analyzer.analyze("example.com")
++        identity_section = report.sections["Organization Identity"]
++        self.assertEqual(identity_section["Organization"], "Acme Inc.")
++        self.assertNotIn("Notice", identity_section)
+diff --git a/whois_osint/services/whois_parser.py b/whois_osint/services/whois_parser.py
+index c6254ad..8427927 100644
+--- a/whois_osint/services/whois_parser.py
++++ b/whois_osint/services/whois_parser.py
+@@ -40,6 +40,18 @@ _FIELD_ALIASES: dict[str, str] = {
+     "modified": "Updated Date",
+     "dnssec": "DNSSEC",
+     "domain status": "Domain Status",
++    "organisation": "Organization",
++    "registrant organisation": "Registrant Organization",
++    "registrant organization": "Registrant Organization",
++    "admin organisation": "Admin Organization",
++    "admin organization": "Admin Organization",
++    "tech organisation": "Tech Organization",
++    "tech organization": "Tech Organization",
++    "sponsoring organisation": "Registrant Organization",
++    "sponsoring organization": "Registrant Organization",
++    "registrant name": "Registrant Name",
++    "registrant country": "Registrant Country",
++    "country": "Country",
+ }
+ 
+ 
+-- 
+2.43.0
+

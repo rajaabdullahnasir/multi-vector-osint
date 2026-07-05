@@ -79,11 +79,16 @@ class SocialPresenceChecker:
                 )
                 status_code = response.status_code
                 if verifiable:
+                    # GitHub and X return a real 404 for handles that don't
+                    # exist, so a clean 200 is a trustworthy positive signal.
                     found = status_code == 200
                 else:
-                    # Bot-blocking platforms: treat only a clean 200 as a weak
-                    # positive signal; anything else stays "unverifiable".
-                    found = status_code == 200
+                    # LinkedIn/Facebook/Instagram/Crunchbase serve a 200
+                    # login-wall or soft-404 page for almost any slug,
+                    # whether or not the company page actually exists — a
+                    # 200 here is NOT evidence of existence. Never claim
+                    # "found" for these; always surface as unverifiable.
+                    found = False
             except requests.RequestException:
                 status_code = None
 

@@ -75,12 +75,22 @@ class OrgFootprintAnalyzer:
 
         identity = self.identity_lookup.lookup(domain)
         if identity.success:
-            sections["Organization Identity"] = {
-                "Organization": identity.org_name or "—",
-                "Country": identity.country or "—",
-                "Registrar": identity.registrar or "—",
-                "WHOIS Privacy": "Enabled" if identity.whois_privacy else "Not detected",
-            }
+            if identity.registry_withholds_data:
+                sections["Organization Identity"] = {
+                    "Notice": (
+                        "This domain's registry does not publish registrant/organization "
+                        "details via WHOIS (common for several ccTLDs). Only nameservers, "
+                        "dates, and status are available."
+                    ),
+                    "Registrar": identity.registrar or "—",
+                }
+            else:
+                sections["Organization Identity"] = {
+                    "Organization": identity.org_name or "—",
+                    "Country": identity.country or "—",
+                    "Registrar": identity.registrar or "—",
+                    "WHOIS Privacy": "Enabled" if identity.whois_privacy else "Not detected",
+                }
         else:
             sections["Organization Identity"] = {"Notice": identity.error or "WHOIS lookup failed."}
 
@@ -116,7 +126,7 @@ class OrgFootprintAnalyzer:
             check.platform: (
                 f"Confirmed — {check.url}"
                 if check.found
-                else ("Unverifiable (bot-protected)" if not check.verifiable and check.status_code != 200 else "Not found")
+                else ("Unverifiable (bot-protected)" if not check.verifiable else "Not found")
             )
             for check in social.checks
         }

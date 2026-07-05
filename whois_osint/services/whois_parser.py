@@ -40,6 +40,18 @@ _FIELD_ALIASES: dict[str, str] = {
     "modified": "Updated Date",
     "dnssec": "DNSSEC",
     "domain status": "Domain Status",
+    "organisation": "Organization",
+    "registrant organisation": "Registrant Organization",
+    "registrant organization": "Registrant Organization",
+    "admin organisation": "Admin Organization",
+    "admin organization": "Admin Organization",
+    "tech organisation": "Tech Organization",
+    "tech organization": "Tech Organization",
+    "sponsoring organisation": "Registrant Organization",
+    "sponsoring organization": "Registrant Organization",
+    "registrant name": "Registrant Name",
+    "registrant country": "Registrant Country",
+    "country": "Country",
 }
 
 
