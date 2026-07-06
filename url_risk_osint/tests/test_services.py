@@ -105,6 +105,124 @@ class DnsblClientTests(SimpleTestCase):
         self.assertFalse(result.checked)
 
 
+class DnsblQueryFailureRegressionTests(SimpleTestCase):
+    """
+    Regression tests for a real bug: a DNS timeout/resolution failure was
+    caught by the same except clause as a genuine NXDOMAIN ("not listed"),
+    so a failed security check silently looked identical to a verified-
+    clean result. This is the same false-negative pattern already fixed in
+    WHOIS and Username OSINT this session, applied to a threat-intel check
+    where it's especially dangerous — it could report a malicious URL as
+    "Safe" purely because the DNSBL lookup failed to resolve at all.
+    """
+
+    def _mock_answer(self, ip: str):
+        answer = type("A", (), {"to_text": lambda self, ip=ip: ip})()
+        return [answer]
+
+    @patch("url_risk_osint.services.dnsbl_client.dns.resolver.Resolver.resolve")
+    def test_both_lists_erroring_is_not_reported_as_clean(self, mock_resolve):
+        mock_resolve.side_effect = dns.resolver.Timeout()
+        result = DnsblClient().check("some-domain.com")
+        self.assertTrue(result.checked)
+        self.assertFalse(result.listed)
+        self.assertFalse(result.fully_verified)
+        self.assertEqual(set(result.lists_errored), {"Spamhaus DBL", "SURBL"})
+        self.assertIsNotNone(result.error)
+
+    @patch("url_risk_osint.services.dnsbl_client.dns.resolver.Resolver.resolve")
+    def test_one_list_erroring_is_tracked_separately_from_clean(self, mock_resolve):
+        def side_effect(name, rdtype):
+            if "dbl.spamhaus.org" in name:
+                raise dns.resolver.Timeout()
+            raise dns.resolver.NXDOMAIN()  # SURBL genuinely clean
+
+        mock_resolve.side_effect = side_effect
+        result = DnsblClient().check("some-domain.com")
+        self.assertTrue(result.checked)
+        self.assertFalse(result.listed)
+        self.assertFalse(result.fully_verified)
+        self.assertEqual(result.lists_errored, ["Spamhaus DBL"])
+
+    @patch("url_risk_osint.services.dnsbl_client.dns.resolver.Resolver.resolve")
+    def test_genuine_nxdomain_on_both_is_fully_verified_clean(self, mock_resolve):
+        mock_resolve.side_effect = dns.resolver.NXDOMAIN()
+        result = DnsblClient().check("clean-example.com")
+        self.assertTrue(result.fully_verified)
+        self.assertEqual(result.lists_errored, [])
+
+    @patch("url_risk_osint.services.dnsbl_client.dns.resolver.Resolver.resolve")
+    def test_listing_still_reported_even_if_other_list_errors(self, mock_resolve):
+        def side_effect(name, rdtype):
+            if "dbl.spamhaus.org" in name:
+                return self._mock_answer("127.0.1.5")  # malware
+            raise dns.resolver.Timeout()  # SURBL fails
+
+        mock_resolve.side_effect = side_effect
+        result = DnsblClient().check("bad-example.com")
+        self.assertTrue(result.listed)
+        self.assertIn("malware domain", result.categories)
+        self.assertEqual(result.lists_errored, ["SURBL"])
+
+
+class AnalyzerDnsblHonestyTests(SimpleTestCase):
+    """The rendered report text itself must never claim 'Not listed' when
+    the query actually failed — this is what a human reads and trusts."""
+
+    def setUp(self):
+        self.analyzer = UrlRiskAnalyzer.__new__(UrlRiskAnalyzer)
+        from url_risk_osint.services.url_validator import UrlValidator
+
+        self.analyzer.validator = UrlValidator()
+        self.analyzer.dnsbl_client = type(
+            "Fake", (), {"check": lambda self, host: self._result}
+        )()
+
+    def _analyze_with(self, dnsbl_result):
+        self.analyzer.dnsbl_client._result = dnsbl_result
+        return self.analyzer.analyze("https://example.com")
+
+    def test_total_dnsbl_failure_does_not_say_not_listed(self):
+        from url_risk_osint.services.dnsbl_client import DnsblResult
+
+        dnsbl = DnsblResult(
+            checked=True,
+            host="example.com",
+            listed=False,
+            lists_errored=["Spamhaus DBL", "SURBL"],
+            error="Query failed for: Spamhaus DBL (Timeout); SURBL (Timeout)",
+        )
+        report = self._analyze_with(dnsbl)
+        status = report.sections["Live Threat Feed (DNSBL)"]["Status"]
+        self.assertNotIn("Not listed", status)
+        self.assertIn("could not be verified", status.lower())
+        joined_flags = " ".join(report.risk_flags)
+        self.assertIn("NOT a confirmed-safe result", joined_flags)
+
+    def test_partial_failure_names_which_list_actually_answered(self):
+        from url_risk_osint.services.dnsbl_client import DnsblResult
+
+        dnsbl = DnsblResult(
+            checked=True,
+            host="example.com",
+            listed=False,
+            lists_errored=["Spamhaus DBL"],
+            error="Query failed for: Spamhaus DBL (Timeout)",
+        )
+        report = self._analyze_with(dnsbl)
+        status = report.sections["Live Threat Feed (DNSBL)"]["Status"]
+        self.assertIn("SURBL", status)
+        self.assertIn("could not be reached", status)
+
+    def test_genuine_clean_result_unaffected(self):
+        from url_risk_osint.services.dnsbl_client import DnsblResult
+
+        dnsbl = DnsblResult(checked=True, host="example.com", listed=False)
+        report = self._analyze_with(dnsbl)
+        status = report.sections["Live Threat Feed (DNSBL)"]["Status"]
+        self.assertEqual(status, "Not listed on Spamhaus DBL or SURBL.")
+
+
 class RiskScorerDnsblIntegrationTests(SimpleTestCase):
     def test_dnsbl_listing_forces_dangerous_even_with_no_other_signals(self):
         from url_risk_osint.services.dnsbl_client import DnsblResult

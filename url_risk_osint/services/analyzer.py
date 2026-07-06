@@ -97,9 +97,27 @@ class UrlRiskAnalyzer:
                     "Lists": ", ".join(dnsbl.lists_hit),
                     "Categories": ", ".join(dnsbl.categories) or "—",
                 }
+                if dnsbl.lists_errored:
+                    sections["Live Threat Feed (DNSBL)"]["Note"] = (
+                        f"Could not query: {', '.join(dnsbl.lists_errored)} — "
+                        "listing above is from the list(s) that did respond."
+                    )
             elif dnsbl.rate_limited:
                 sections["Live Threat Feed (DNSBL)"] = {
                     "Status": "Unavailable — rate limited by Spamhaus's free tier right now.",
+                }
+            elif dnsbl.lists_errored and len(dnsbl.lists_errored) == 2:
+                # Both lists failed — we verified NOTHING. Must not imply "safe".
+                sections["Live Threat Feed (DNSBL)"] = {
+                    "Status": "Could not be verified — both threat feeds failed to respond.",
+                    "Detail": dnsbl.error or "Unknown DNS error.",
+                }
+            elif dnsbl.lists_errored:
+                # One list answered clean, the other failed — say exactly that.
+                checked_ok = "SURBL" if "Spamhaus DBL" in dnsbl.lists_errored else "Spamhaus DBL"
+                sections["Live Threat Feed (DNSBL)"] = {
+                    "Status": f"Not listed on {checked_ok} — the other feed could not be reached.",
+                    "Detail": dnsbl.error or "Unknown DNS error.",
                 }
             else:
                 sections["Live Threat Feed (DNSBL)"] = {
@@ -137,6 +155,17 @@ class UrlRiskAnalyzer:
             flags.append("Suspicious indicators present — verify destination before use.")
         else:
             flags.append("No strong risk indicators from lexical/blacklist/DNSBL checks.")
+        if dnsbl and dnsbl.checked and dnsbl.lists_errored and not dnsbl.listed:
+            if len(dnsbl.lists_errored) == 2:
+                flags.append(
+                    "DNSBL check could not be verified — both threat feeds failed to "
+                    "respond. This is NOT a confirmed-safe result for that check."
+                )
+            else:
+                flags.append(
+                    f"{dnsbl.lists_errored[0]} could not be reached — DNSBL result is "
+                    "based on the other feed only."
+                )
         if blacklist:
             flags.append(f"{len(blacklist)} blacklist rule(s) matched.")
         if lexical:

@@ -55,8 +55,16 @@ class DnsblResult:
     listed: bool = False
     categories: list[str] = field(default_factory=list)
     lists_hit: list[str] = field(default_factory=list)
+    lists_errored: list[str] = field(default_factory=list)
     rate_limited: bool = False
     error: str | None = None
+
+    @property
+    def fully_verified(self) -> bool:
+        """True only if every configured list actually answered (listed or
+        genuinely clean) — false if any list's query failed/timed out,
+        since a failed query must never be presented as 'not listed'."""
+        return self.checked and not self.lists_errored
 
 
 class DnsblClient:
@@ -72,32 +80,50 @@ class DnsblClient:
 
         result = DnsblResult(checked=True, host=host)
 
-        dbl_hit = self._query(f"{host}.dbl.spamhaus.org")
-        if dbl_hit:
-            if _DBL_RATE_LIMITED in dbl_hit:
+        dbl_status, dbl_codes, dbl_err = self._query(f"{host}.dbl.spamhaus.org")
+        if dbl_status == "listed":
+            if _DBL_RATE_LIMITED in dbl_codes:
                 result.rate_limited = True
             else:
                 result.listed = True
                 result.lists_hit.append("Spamhaus DBL")
-                for code in dbl_hit:
+                for code in dbl_codes:
                     category = _DBL_CATEGORY_MAP.get(code, f"listed ({code})")
                     if category not in result.categories:
                         result.categories.append(category)
+        elif dbl_status == "error":
+            result.lists_errored.append("Spamhaus DBL")
 
-        surbl_hit = self._query(f"{host}.multi.surbl.org")
-        if surbl_hit:
+        surbl_status, surbl_codes, surbl_err = self._query(f"{host}.multi.surbl.org")
+        if surbl_status == "listed":
             result.listed = True
             result.lists_hit.append("SURBL")
-            if "listed (SURBL)" not in result.categories:
+            if "listed on SURBL (spam/phishing/malware aggregate)" not in result.categories:
                 result.categories.append("listed on SURBL (spam/phishing/malware aggregate)")
+        elif surbl_status == "error":
+            result.lists_errored.append("SURBL")
+
+        if result.lists_errored:
+            reasons = []
+            if "Spamhaus DBL" in result.lists_errored:
+                reasons.append(f"Spamhaus DBL ({dbl_err})")
+            if "SURBL" in result.lists_errored:
+                reasons.append(f"SURBL ({surbl_err})")
+            result.error = "Query failed for: " + "; ".join(reasons)
 
         return result
 
-    def _query(self, name: str) -> list[str] | None:
+    def _query(self, name: str) -> tuple[str, list[str], str]:
+        """Returns (status, codes, error_reason).
+        status is one of: 'listed', 'clean', 'error'.
+        'clean' (genuine NXDOMAIN) and 'error' (timeout/DNS failure) must
+        stay distinguishable — collapsing them was the bug: a failed query
+        used to look identical to a verified-clean result.
+        """
         try:
             answers = self.resolver.resolve(name, "A")
-            return [answer.to_text() for answer in answers]
+            return "listed", [answer.to_text() for answer in answers], ""
         except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
-            return None
-        except dns.exception.DNSException:
-            return None
+            return "clean", [], ""
+        except dns.exception.DNSException as exc:
+            return "error", [], exc.__class__.__name__
