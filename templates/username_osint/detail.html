@@ -90,6 +90,40 @@
 </details>
 {% endif %}
 
+{% if inconclusive_platforms %}
+<details class="ov-panel" style="margin-bottom: var(--ov-space-4);" open>
+  <summary class="ov-panel__title" style="cursor: pointer; color: var(--ov-color-warning);">
+    Inconclusive — not confirmed either way ({{ inconclusive_platforms|length }})
+  </summary>
+  <p class="ov-caption" style="margin-top: var(--ov-space-2);">
+    These platforms blocked the automated check, rate-limited it, or returned an
+    error. They are NOT evidence the username doesn't exist — check them manually.
+  </p>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>Platform</th>
+          <th>Category</th>
+          <th>HTTP</th>
+          <th>Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in inconclusive_platforms %}
+        <tr>
+          <td>{{ row.platform }}</td>
+          <td class="ov-caption">{{ row.category }}</td>
+          <td class="ov-caption">{{ row.status_code|default:"—" }}</td>
+          <td class="ov-caption">{{ row.inconclusive_reason }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</details>
+{% endif %}
+
 {% for section_name, section_fields in metadata_sections %}
 <div class="ov-panel" style="margin-bottom: var(--ov-space-4);" data-module="username">
   <h3 class="ov-panel__title">{{ section_name }}</h3>

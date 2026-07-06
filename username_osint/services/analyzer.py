@@ -71,15 +71,19 @@ class UsernameOsintAnalyzer:
 
         platforms_payload = [h.to_dict() for h in scan.hits]
         found_count = scan.found_count
+        inconclusive_count = scan.inconclusive_count
+        not_found_count = scan.checked_count - found_count - inconclusive_count
 
         sections["Target"]["Platforms scanned"] = str(scan.checked_count)
         sections["Summary"] = {
             "Profiles found": str(found_count),
+            "Confirmed no match": str(not_found_count),
+            "Inconclusive (blocked/rate-limited/error)": str(inconclusive_count),
             "Platforms checked": str(scan.checked_count),
-            "Status": "Accounts detected" if found_count else "No profiles found",
+            "Status": "Accounts detected" if found_count else "No confirmed profiles found",
         }
 
-        risk_flags = self._derive_risk_flags(username, found_count, scan)
+        risk_flags = self._derive_risk_flags(username, found_count, inconclusive_count, scan)
 
         return UsernameOsintReport(
             success=True,
@@ -92,19 +96,24 @@ class UsernameOsintAnalyzer:
         )
 
     def _derive_risk_flags(
-        self, username: str, found_count: int, scan: PlatformScanResult
+        self, username: str, found_count: int, inconclusive_count: int, scan: PlatformScanResult
     ) -> list[str]:
         flags: list[str] = []
         if found_count == 0:
             flags.append(
-                f"No public profiles matched for '{username}' on the configured platforms."
+                f"No confirmed public profiles for '{username}' on the platforms that could be checked."
             )
         else:
             flags.append(
                 f"Username appears on {found_count} platform(s) — review linked profiles for attribution."
             )
+        if inconclusive_count:
+            flags.append(
+                f"{inconclusive_count} platform(s) blocked the automated check, rate-limited it, "
+                "or errored out — these are NOT confirmed as absent and should be checked manually."
+            )
         if scan.warnings:
-            flags.append(f"{len(scan.warnings)} platform check(s) had errors or timeouts.")
+            flags.append(f"{len(scan.warnings)} platform check(s) had unexpected errors.")
         flags.append(
             "Results are heuristic (HTTP status/body). Verify manually before reporting."
         )

@@ -157,7 +157,10 @@ def lookup_detail(request, pk):
 
     platforms = report.get("platforms") or []
     found_platforms = [p for p in platforms if p.get("found")]
-    not_found_platforms = [p for p in platforms if not p.get("found")]
+    inconclusive_platforms = [p for p in platforms if p.get("inconclusive") and not p.get("found")]
+    not_found_platforms = [
+        p for p in platforms if not p.get("found") and not p.get("inconclusive")
+    ]
 
     return render(
         request,
@@ -168,6 +171,7 @@ def lookup_detail(request, pk):
             "metadata_sections": ordered_sections,
             "found_platforms": found_platforms,
             "not_found_platforms": not_found_platforms,
+            "inconclusive_platforms": inconclusive_platforms,
             "risk_flags": lookup.risk_flags or [],
             "active_module": "username",
         },

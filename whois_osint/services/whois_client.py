@@ -108,18 +108,30 @@ class WhoisClient:
 
     def _query_server(self, host: str, query: str) -> str:
         payload = f"{query}\r\n".encode("utf-8")
+        max_bytes = getattr(settings, "WHOIS_MAX_RESPONSE_BYTES", 1_000_000)
         with socket.create_connection((host, 43), timeout=self.timeout) as sock:
             sock.sendall(payload)
             chunks: list[bytes] = []
+            total = 0
             while True:
                 try:
                     data = sock.recv(4096)
                 except socket.timeout:
+                    # Server went quiet without closing — treat what we have
+                    # as the full response rather than losing it entirely.
                     break
                 if not data:
+                    # WHOIS servers signal "response complete" by closing the
+                    # connection — this is the correct, only reliable stop
+                    # condition. A short recv() does NOT mean "no more data
+                    # coming"; TCP can (and does) deliver a response across
+                    # many packets smaller than our buffer size.
                     break
                 chunks.append(data)
-                if len(data) < 4096:
+                total += len(data)
+                if total >= max_bytes:
+                    # Safety cap against a misbehaving/malicious server that
+                    # never closes the connection.
                     break
         raw = b"".join(chunks)
         return raw.decode("utf-8", errors="replace")

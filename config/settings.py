@@ -113,6 +113,7 @@ IMAGE_OSINT_UPLOAD_SUBDIR = "image_osint/uploads"
 
 # Module 2 — WHOIS & DNS
 WHOIS_TIMEOUT_SECONDS = 12
+WHOIS_MAX_RESPONSE_BYTES = 1_000_000  # safety cap against a misbehaving server
 
 # Module 4 — Email Breach (XposedOrNot free public API, SRS-22)
 # https://xposedornot.com/api_doc — no API key; open-source https://github.com/XposedOrNot

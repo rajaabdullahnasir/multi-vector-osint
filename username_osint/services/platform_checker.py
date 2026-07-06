@@ -24,6 +24,8 @@ class PlatformHit:
     url: str
     status_code: int
     found: bool
+    inconclusive: bool = False
+    inconclusive_reason: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -32,6 +34,8 @@ class PlatformHit:
             "url": self.url,
             "status_code": self.status_code,
             "found": self.found,
+            "inconclusive": self.inconclusive,
+            "inconclusive_reason": self.inconclusive_reason,
         }
 
 
@@ -47,6 +51,10 @@ class PlatformScanResult:
     @property
     def found_count(self) -> int:
         return sum(1 for h in self.hits if h.found)
+
+    @property
+    def inconclusive_count(self) -> int:
+        return sum(1 for h in self.hits if h.inconclusive)
 
 
 def _user_agent() -> str:
@@ -75,6 +83,16 @@ def _profile_url(platform: Platform, username: str) -> str:
     return platform.url_template.format(username=username)
 
 
+# Status codes that virtually never mean "this exact platform confirmed the
+# username doesn't exist" — they mean an automated request was blocked,
+# throttled, or otherwise couldn't get a real answer. Treating these as
+# "not found" produces false negatives (e.g. GitLab/npm/Medium's WAF
+# returning 403 to bots, or a 429 rate limit, are not confirmations of
+# absence). A platform can still override this by explicitly listing one
+# of these codes in its own not_found_status if it has a verified reason to.
+_AMBIGUOUS_BLOCK_STATUS = {401, 403, 429, 503, 999}
+
+
 def _check_one(platform: Platform, username: str) -> PlatformHit:
     url = _profile_url(platform, username)
     headers = {
@@ -101,14 +119,18 @@ def _check_one(platform: Platform, username: str) -> PlatformHit:
             url=url,
             status_code=0,
             found=False,
+            inconclusive=True,
+            inconclusive_reason="Request timed out",
         )
-    except requests.RequestException:
+    except requests.RequestException as exc:
         return PlatformHit(
             platform=platform.name,
             category=platform.category,
             url=url,
             status_code=0,
             found=False,
+            inconclusive=True,
+            inconclusive_reason=f"Network error ({exc.__class__.__name__})",
         )
 
     if status_code in platform.not_found_status:
@@ -118,6 +140,22 @@ def _check_one(platform: Platform, username: str) -> PlatformHit:
             url=url,
             status_code=status_code,
             found=False,
+        )
+
+    if status_code in _AMBIGUOUS_BLOCK_STATUS:
+        reason = (
+            "Rate limited by platform (HTTP 429)"
+            if status_code == 429
+            else f"Automated request blocked (HTTP {status_code})"
+        )
+        return PlatformHit(
+            platform=platform.name,
+            category=platform.category,
+            url=url,
+            status_code=status_code,
+            found=False,
+            inconclusive=True,
+            inconclusive_reason=reason,
         )
 
     if platform.not_found_phrases and any(p in text for p in platform.not_found_phrases):
