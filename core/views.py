@@ -5,6 +5,7 @@ from core.context_processors import resolve_module_nav
 from core.dashboard_analytics import build_dashboard_analytics
 from email_breach_osint.models import EmailBreachCheck
 from image_osint.models import ImageAnalysis
+from investigation_osint.models import Investigation
 from ip_intel_osint.models import IPIntelligence
 from org_footprint_osint.models import OrgFootprint
 from password_breach_osint.models import PasswordBreachCheck
@@ -36,6 +37,7 @@ def dashboard(request):
     recent_hash_jobs = HashJob.objects.filter(user=request.user)[:5]
     recent_org_footprints = OrgFootprint.objects.filter(user=request.user)[:5]
     recent_ip_intel = IPIntelligence.objects.filter(user=request.user)[:5]
+    recent_investigations = Investigation.objects.filter(user=request.user)[:5]
 
     has_recent = any(
         [
@@ -49,6 +51,7 @@ def dashboard(request):
             recent_hash_jobs,
             recent_org_footprints,
             recent_ip_intel,
+            recent_investigations,
         ]
     )
 
@@ -71,6 +74,7 @@ def dashboard(request):
             "recent_hash_jobs": recent_hash_jobs,
             "recent_org_footprints": recent_org_footprints,
             "recent_ip_intel": recent_ip_intel,
+            "recent_investigations": recent_investigations,
             "has_recent": has_recent,
         },
     )

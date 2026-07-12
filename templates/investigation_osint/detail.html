@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% load ov_icons %}
+{% block title %}{{ record.target_domain }} — Investigation{% endblock %}
+{% block page_heading %}Investigation report{% endblock %}
+{% block content %}
+{% url 'investigation_osint:export_json' record.pk as export_url %}
+{% url 'investigation_osint:home' as back_url %}
+{% url 'investigation_osint:delete' record.pk as delete_url %}
+{% include "partials/report_bar.html" with report_label="Investigation" report_title=record.target_domain report_meta=record.created_at export_url=export_url back_url=back_url delete_url=delete_url delete_confirm="Delete this investigation? (Individual module records it created will still remain in their own histories.)" %}
+
+<div class="ov-report-meta">
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Overall risk</div>
+    <div class="ov-report-meta__value">
+      {% if record.overall_risk_level == 'critical' %}
+      <span class="ov-status ov-status--bad">Critical</span>
+      {% elif record.overall_risk_level == 'elevated' %}
+      <span class="ov-status ov-status--bad">Elevated</span>
+      {% elif record.overall_risk_level == 'moderate' %}
+      <span class="ov-status ov-status--neutral">Moderate</span>
+      {% else %}
+      <span class="ov-status ov-status--ok">Low</span>
+      {% endif %}
+    </div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Modules run</div>
+    <div class="ov-report-meta__value">{{ record.modules_run|length }}</div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Emails checked</div>
+    <div class="ov-report-meta__value">{{ record.emails_checked }}</div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">IPs / Usernames</div>
+    <div class="ov-report-meta__value">{{ record.ips_checked }} / {{ record.usernames_checked }}</div>
+  </div>
+</div>
+
+{% if risk_flags %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-6);">
+  <h3 class="ov-panel__title">Consolidated risk flags (all modules)</h3>
+  <ul class="ov-text-secondary" style="margin: var(--ov-space-4) 0 0; padding-left: 1.1rem; line-height: 1.8; color: var(--ov-color-warning);">
+    {% for flag in risk_flags %}
+    <li>{{ flag }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<div class="ov-panel" style="margin-bottom: var(--ov-space-6);">
+  <h3 class="ov-panel__title">Entity map</h3>
+  <p class="ov-caption" style="margin-top: var(--ov-space-2); margin-bottom: var(--ov-space-4);">
+    Everything this investigation discovered while pivoting from {{ record.target_domain }}.
+  </p>
+
+  {% regroup nodes by type as node_groups %}
+  <div class="ov-table-wrap" style="border: none;">
+    <table class="ov-table">
+      <tbody>
+        {% for group in node_groups %}
+        <tr>
+          <th style="width: 20%; font-weight: 500; vertical-align: top; padding-top: var(--ov-space-3);">
+            {% if group.grouper == 'domain' %}Target domain
+            {% elif group.grouper == 'subdomain' %}Subdomains ({{ group.list|length }})
+            {% elif group.grouper == 'ip' %}IP addresses ({{ group.list|length }})
+            {% elif group.grouper == 'email' %}Email addresses ({{ group.list|length }})
+            {% elif group.grouper == 'username' %}Usernames ({{ group.list|length }})
+            {% else %}{{ group.grouper|title }}
+            {% endif %}
+          </th>
+          <td style="word-break: break-word;">
+            {% for node in group.list %}
+            <span class="ov-status ov-status--neutral" style="margin: 0 var(--ov-space-2) var(--ov-space-2) 0; display: inline-block;">{{ node.label }}</span>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="ov-section__head">
+  <h2 class="ov-section__title">Module-by-module results</h2>
+</div>
+
+{% for outcome in outcomes %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--ov-space-4);">
+    <div>
+      <h3 class="ov-panel__title">{{ outcome.label }}</h3>
+      <p class="ov-text-secondary" style="margin-top: var(--ov-space-2);">{{ outcome.summary }}</p>
+      {% if outcome.risk_contribution %}
+      <ul class="ov-caption" style="margin-top: var(--ov-space-2); padding-left: 1.1rem; color: var(--ov-color-warning);">
+        {% for flag in outcome.risk_contribution %}
+        <li>{{ flag }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+    <div style="flex-shrink: 0;">
+      {% if outcome.ok and outcome.record_id %}
+      <a class="ov-btn ov-btn--secondary ov-btn--icon" href="{% url outcome.url_name outcome.record_id %}">
+        {% ov_icon "external-link" size="sm" %}
+        <span>Full report</span>
+      </a>
+      {% else %}
+      <span class="ov-status ov-status--bad">Failed</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+{% endblock %}

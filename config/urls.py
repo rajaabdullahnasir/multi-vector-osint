@@ -38,6 +38,10 @@ urlpatterns = [
         "modules/ip-intel/",
         include(("ip_intel_osint.urls", "ip_intel_osint")),
     ),
+    path(
+        "investigation/",
+        include(("investigation_osint.urls", "investigation_osint")),
+    ),
 ]
 
 if settings.DEBUG:

@@ -91,6 +91,15 @@ MODULE_NAV = [
         "abbr": "IP",
         "available": True,
     },
+    {
+        "slug": "investigation",
+        "name": "Investigation",
+        "description": "Multi-vector correlation — pivots one domain across all modules automatically",
+        "url_name": "investigation_osint:home",
+        "icon": "search",
+        "abbr": "IV",
+        "available": True,
+    },
 ]
 
 NAMESPACE_TO_MODULE_SLUG = {
@@ -104,6 +113,7 @@ NAMESPACE_TO_MODULE_SLUG = {
     "password_hasher_osint": "hasher",
     "org_footprint_osint": "org-footprint",
     "ip_intel_osint": "ip-intel",
+    "investigation_osint": "investigation",
 }
 
 MODULE_ICON_BY_SLUG = {item["slug"]: item["icon"] for item in MODULE_NAV}

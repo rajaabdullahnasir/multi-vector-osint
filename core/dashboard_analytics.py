@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from email_breach_osint.models import EmailBreachCheck
 from image_osint.models import ImageAnalysis
+from investigation_osint.models import Investigation
 from ip_intel_osint.models import IPIntelligence
 from org_footprint_osint.models import OrgFootprint
 from password_breach_osint.models import PasswordBreachCheck
@@ -31,6 +32,7 @@ MODULE_MODELS = {
     "hasher": ("Password Hasher", HashJob),
     "org-footprint": ("Company Footprint", OrgFootprint),
     "ip-intel": ("IP Intelligence", IPIntelligence),
+    "investigation": ("Investigation", Investigation),
 }
 
 
@@ -111,7 +113,7 @@ def build_dashboard_analytics(user) -> dict:
         },
         {
             "label": "Active modules",
-            "value": f"{modules_used}/10",
+            "value": f"{modules_used}/11",
             "hint": "Modules you have used at least once",
             "icon": "layers",
         },

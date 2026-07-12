@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "password_breach_osint.apps.PasswordBreachOsintConfig",
     "org_footprint_osint.apps.OrgFootprintOsintConfig",
     "ip_intel_osint.apps.IpIntelOsintConfig",
+    "investigation_osint.apps.InvestigationOsintConfig",
 ]
 
 MIDDLEWARE = [

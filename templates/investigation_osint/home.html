@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% load static ov_icons %}
+{% block title %}Investigation — OSINT Vector{% endblock %}
+{% block page_heading %}Investigation{% endblock %}
+{% block page_lead %}<p class="ov-page-lead">One domain in — pivots automatically across WHOIS, subdomains, IP intelligence, company footprint, URL risk, email breach, and username OSINT. This is the actual multi-vector correlation, not just ten separate tools.</p>{% endblock %}
+{% block content %}
+<div class="ov-workspace">
+  <section class="ov-panel" data-module="investigation">
+    <header class="ov-panel__head">
+      <h2 class="ov-panel__title">Start an investigation</h2>
+      <p class="ov-panel__lead">
+        Give it a domain. It will run WHOIS, Subdomain Finder, Company Footprint, and URL Risk automatically,
+        then pivot on whatever it discovers — resolved IPs go to IP Intelligence, found/hinted emails go to
+        Email Breach, and a guessed or hinted handle goes to Username OSINT.
+      </p>
+    </header>
+    <form
+      method="post"
+      action="{% url 'investigation_osint:run' %}"
+      data-investigation-form
+      data-run-url="{% url 'investigation_osint:run' %}"
+      novalidate
+    >
+      {% csrf_token %}
+      <div class="ov-field">
+        <label class="ov-field__label" for="id_domain">{{ form.domain.label }}</label>
+        {{ form.domain }}
+        {% if form.domain.errors %}
+        <p class="ov-caption js-domain-error" style="color: var(--ov-color-danger);">{{ form.domain.errors.0 }}</p>
+        {% else %}
+        <p class="ov-caption">{{ form.domain.help_text }}</p>
+        {% endif %}
+      </div>
+      <div class="ov-field">
+        <label class="ov-field__label" for="id_email_hint">{{ form.email_hint.label }}</label>
+        {{ form.email_hint }}
+        {% if form.email_hint.errors %}
+        <p class="ov-caption" style="color: var(--ov-color-danger);">{{ form.email_hint.errors.0 }}</p>
+        {% else %}
+        <p class="ov-caption">{{ form.email_hint.help_text }}</p>
+        {% endif %}
+      </div>
+      <div class="ov-field">
+        <label class="ov-field__label" for="id_username_hint">{{ form.username_hint.label }}</label>
+        {{ form.username_hint }}
+        {% if form.username_hint.errors %}
+        <p class="ov-caption" style="color: var(--ov-color-danger);">{{ form.username_hint.errors.0 }}</p>
+        {% else %}
+        <p class="ov-caption">{{ form.username_hint.help_text }}</p>
+        {% endif %}
+      </div>
+      <button type="submit" class="ov-btn ov-btn--primary ov-btn--icon" id="investigation-submit-btn">
+        {% ov_icon "search" size="sm" %}
+        <span>Run investigation</span>
+      </button>
+      <p class="ov-caption" style="margin-top: var(--ov-space-3);">
+        This runs up to 7 modules in sequence and can take 30–90 seconds. Each individual
+        result is also saved to that module's own history, so you can open any of them directly afterward.
+      </p>
+    </form>
+  </section>
+</div>
+
+<div id="investigation-loader" class="ov-loader-overlay" aria-hidden="true">
+  <div class="ov-loader-card">
+    <div class="ov-spinner" aria-hidden="true"></div>
+    <p class="ov-loader__title">Running multi-vector investigation</p>
+    <p class="ov-loader__domain js-loader-domain"></p>
+    <p class="ov-loader__status js-loader-status">Starting…</p>
+    <div class="ov-progress"><div class="ov-progress__bar ov-progress__bar--indeterminate"></div></div>
+    <p class="ov-caption" style="margin-top: var(--ov-space-3);">This can take up to a couple of minutes — it's really running 7 modules, not one.</p>
+  </div>
+</div>
+
+{% if records %}
+<section class="ov-section">
+  <div class="ov-section__head">
+    <h2 class="ov-section__title">Recent investigations</h2>
+  </div>
+  <div class="ov-table-wrap">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>Domain</th>
+          <th>Modules run</th>
+          <th>Emails</th>
+          <th>IPs</th>
+          <th>Usernames</th>
+          <th>Risk</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in records %}
+        <tr>
+          <td class="ov-table__mono">{{ row.target_domain }}</td>
+          <td>{{ row.modules_run|length }}</td>
+          <td>{{ row.emails_checked }}</td>
+          <td>{{ row.ips_checked }}</td>
+          <td>{{ row.usernames_checked }}</td>
+          <td>
+            {% if row.overall_risk_level == 'critical' %}
+            <span class="ov-status ov-status--bad">Critical</span>
+            {% elif row.overall_risk_level == 'elevated' %}
+            <span class="ov-status ov-status--bad">Elevated</span>
+            {% elif row.overall_risk_level == 'moderate' %}
+            <span class="ov-status ov-status--neutral">Moderate</span>
+            {% else %}
+            <span class="ov-status ov-status--ok">Low</span>
+            {% endif %}
+          </td>
+          <td><a class="ov-link ov-link--icon" href="{% url 'investigation_osint:detail' row.pk %}">{% ov_icon "eye" size="sm" %}<span>Open</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<script src="{% static 'investigation_osint/investigation.js' %}"></script>
+{% endblock %}
