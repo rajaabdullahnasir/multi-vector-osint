@@ -340,6 +340,22 @@ class InvestigationEngine:
                     )
                 )
                 all_risk_flags.extend(f"[IP {ip}] {f}" for f in (ip_report.risk_flags or []))
+            else:
+                # A failed pivot must stay visible — never let "checked" and
+                # "shown" diverge, or the count silently lies about what
+                # actually happened (the exact bug class fixed elsewhere
+                # this session, now closed here too).
+                outcomes.append(
+                    ModuleOutcome(
+                        module="ip-intel",
+                        label=f"IP Intelligence — {ip}",
+                        key=ip,
+                        record_id=None,
+                        url_name="ip_intel_osint:detail",
+                        summary=ip_report.error or "Lookup failed.",
+                        ok=False,
+                    )
+                )
         if "ip-intel" not in modules_run and ips_checked:
             modules_run.append("ip-intel")
 
@@ -376,6 +392,18 @@ class InvestigationEngine:
                     )
                 )
                 all_risk_flags.extend(f"[Email {email}] {f}" for f in (email_report.risk_flags or []))
+            else:
+                outcomes.append(
+                    ModuleOutcome(
+                        module="email-breach",
+                        label=f"Email Breach — {email}",
+                        key=email,
+                        record_id=None,
+                        url_name="email_breach_osint:detail",
+                        summary=email_report.error or "Check failed.",
+                        ok=False,
+                    )
+                )
         if "email-breach" not in modules_run and emails_checked:
             modules_run.append("email-breach")
 
@@ -420,6 +448,18 @@ class InvestigationEngine:
                     )
                 )
                 all_risk_flags.extend(f"[Username {username}] {f}" for f in (username_report.risk_flags or []))
+            else:
+                outcomes.append(
+                    ModuleOutcome(
+                        module="username",
+                        label=f"Username OSINT — {username}",
+                        key=username,
+                        record_id=None,
+                        url_name="username_osint:detail",
+                        summary=username_report.error or "Scan failed.",
+                        ok=False,
+                    )
+                )
         if "username" not in modules_run and usernames_checked:
             modules_run.append("username")
 

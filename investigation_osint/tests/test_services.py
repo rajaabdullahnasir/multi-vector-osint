@@ -207,3 +207,103 @@ class InvestigationEnginePivotTests(TestCase):
         whois_outcome = next(o for o in report.outcomes if o.module == "whois")
         self.assertFalse(whois_outcome.ok)
         self.assertIn("unreachable", whois_outcome.summary)
+
+
+class PivotLoopFailureVisibilityRegressionTests(TestCase):
+    """
+    Regression tests for a real bug found via live testing: emails_checked
+    showed 1 in the summary stats, but no Email Breach section appeared
+    anywhere in the report and no email node showed in the entity map — a
+    failed pivot call was silently counted but never surfaced. Same bug
+    class as WHOIS truncation / username false negatives / DNSBL false
+    negatives, just newly introduced in this engine's own pivot loops.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="pivotfail@test.com", email="pivotfail@test.com", password="TestPass1!"
+        )
+        self.engine = InvestigationEngine(self.user)
+        self.engine.whois_analyzer.analyze = lambda domain: DomainIntelReport(
+            success=True, domain=domain, whois_raw="", name_servers=[], dns_records_count=0,
+            sections={}, risk_flags=[],
+        )
+        self.engine.subdomain_analyzer.analyze = lambda domain: SubdomainScanReport(
+            success=True, domain=domain, sections={},
+            subdomains=[{"host": domain, "sources": ["dns"], "records": ["A 93.184.216.34"], "dns_verified": True}],
+            subdomain_count=1, dns_verified_count=1, sources_used=["dns-bruteforce"], risk_flags=[],
+        )
+        self.engine.org_analyzer.analyze = lambda domain: OrgFootprintReport(
+            success=True, domain=domain, sections={}, risk_flags=[],
+        )
+        self.engine.url_analyzer.analyze = lambda url: UrlRiskReport(
+            success=True, url=url, risk_level="safe", risk_score=0, sections={}, risk_flags=[],
+        )
+
+    def test_failed_ip_pivot_still_shown_as_failed_outcome(self):
+        self.engine.ip_analyzer.analyze = lambda ip: IPIntelReport(
+            success=False, error="Geolocation service unreachable."
+        )
+        self.engine.email_analyzer.analyze = lambda email: EmailBreachReport(success=True, email=email)
+        self.engine.username_analyzer.analyze = lambda u: UsernameOsintReport(success=True, username=u)
+
+        report = self.engine.run("example.com", username_hint="someuser")
+
+        self.assertEqual(report.ips_checked, 1)
+        ip_outcomes = [o for o in report.outcomes if o.module == "ip-intel"]
+        self.assertEqual(len(ip_outcomes), 1)  # visible even though it failed
+        self.assertFalse(ip_outcomes[0].ok)
+        self.assertIn("unreachable", ip_outcomes[0].summary)
+        # A failed pivot must not create a phantom node with no data behind it.
+        ip_nodes = [n for n in report.nodes if n["type"] == "ip"]
+        self.assertEqual(ip_nodes, [])
+
+    def test_failed_email_pivot_still_shown_as_failed_outcome(self):
+        self.engine.ip_analyzer.analyze = lambda ip: IPIntelReport(success=True, query_input=ip, ip=ip)
+        self.engine.email_analyzer.analyze = lambda email: EmailBreachReport(
+            success=False, error="Breach API timed out."
+        )
+        self.engine.username_analyzer.analyze = lambda u: UsernameOsintReport(success=True, username=u)
+
+        report = self.engine.run("example.com", email_hint="test@example.com", username_hint="someuser")
+
+        self.assertEqual(report.emails_checked, 1)
+        email_outcomes = [o for o in report.outcomes if o.module == "email-breach"]
+        self.assertEqual(len(email_outcomes), 1)
+        self.assertFalse(email_outcomes[0].ok)
+        self.assertIn("timed out", email_outcomes[0].summary)
+        email_nodes = [n for n in report.nodes if n["type"] == "email"]
+        self.assertEqual(email_nodes, [])
+
+    def test_failed_username_pivot_still_shown_as_failed_outcome(self):
+        self.engine.ip_analyzer.analyze = lambda ip: IPIntelReport(success=True, query_input=ip, ip=ip)
+        self.engine.email_analyzer.analyze = lambda email: EmailBreachReport(success=True, email=email)
+        self.engine.username_analyzer.analyze = lambda u: UsernameOsintReport(
+            success=False, error="All platform checks failed."
+        )
+
+        report = self.engine.run("example.com", username_hint="someuser")
+
+        self.assertEqual(report.usernames_checked, 1)
+        username_outcomes = [o for o in report.outcomes if o.module == "username"]
+        self.assertEqual(len(username_outcomes), 1)
+        self.assertFalse(username_outcomes[0].ok)
+        self.assertIn("failed", username_outcomes[0].summary.lower())
+        username_nodes = [n for n in report.nodes if n["type"] == "username"]
+        self.assertEqual(username_nodes, [])
+
+    def test_checked_count_always_matches_visible_outcome_count(self):
+        """The core invariant: however many pivots ran, exactly that many
+        outcomes must be visible in the report — success or failure."""
+        self.engine.ip_analyzer.analyze = lambda ip: IPIntelReport(success=False, error="down")
+        self.engine.email_analyzer.analyze = lambda email: EmailBreachReport(success=False, error="down")
+        self.engine.username_analyzer.analyze = lambda u: UsernameOsintReport(success=False, error="down")
+
+        report = self.engine.run("example.com", email_hint="a@example.com", username_hint="someuser")
+
+        ip_outcomes = [o for o in report.outcomes if o.module == "ip-intel"]
+        email_outcomes = [o for o in report.outcomes if o.module == "email-breach"]
+        username_outcomes = [o for o in report.outcomes if o.module == "username"]
+        self.assertEqual(len(ip_outcomes), report.ips_checked)
+        self.assertEqual(len(email_outcomes), report.emails_checked)
+        self.assertEqual(len(username_outcomes), report.usernames_checked)
