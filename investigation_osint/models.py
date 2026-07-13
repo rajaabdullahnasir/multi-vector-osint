@@ -30,6 +30,12 @@ class Investigation(models.Model):
     error_message = models.TextField(blank=True)
     report_json = models.JSONField(default=dict, blank=True)
     risk_flags = models.JSONField(default=list, blank=True)
+
+    ai_report = models.TextField(blank=True)
+    ai_report_generated_at = models.DateTimeField(null=True, blank=True)
+    ai_report_error = models.TextField(blank=True)
+    ai_report_model = models.CharField(max_length=64, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

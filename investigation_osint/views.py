@@ -7,9 +7,12 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_http_methods
 
+from django.utils import timezone
+
 from .forms import InvestigationForm
 from .models import Investigation
 from .services import InvestigationEngine
+from .services.ai_report_client import GroqReportClient, is_configured
 
 
 def _home_context(request, form, records):
@@ -122,6 +125,11 @@ def export_json(request, pk):
         "created_at": record.created_at.isoformat(),
         "overall_risk_level": record.overall_risk_level,
         "report": record.report_json,
+        "ai_report": record.ai_report,
+        "ai_report_model": record.ai_report_model,
+        "ai_report_generated_at": (
+            record.ai_report_generated_at.isoformat() if record.ai_report_generated_at else None
+        ),
     }
     response = HttpResponse(
         json.dumps(payload, indent=2, default=str), content_type="application/json"
@@ -130,6 +138,40 @@ def export_json(request, pk):
         f'attachment; filename="investigation-{record.target_domain}.json"'
     )
     return response
+
+
+@login_required
+@require_http_methods(["POST"])
+def generate_ai_report(request, pk):
+    record = get_object_or_404(Investigation, pk=pk, user=request.user)
+
+    if not is_configured():
+        messages.error(
+            request,
+            "No Groq API key configured. Get a free key at https://console.groq.com/keys "
+            "and set GROQ_API_KEY in your environment, then try again.",
+        )
+        return redirect("investigation_osint:detail", pk=record.pk)
+
+    result = GroqReportClient().generate(record.report_json or {})
+
+    if result.success:
+        record.ai_report = result.narrative
+        record.ai_report_model = result.model_used
+        record.ai_report_generated_at = timezone.now()
+        record.ai_report_error = ""
+        record.save(
+            update_fields=[
+                "ai_report", "ai_report_model", "ai_report_generated_at", "ai_report_error", "updated_at"
+            ]
+        )
+        messages.success(request, "AI narrative report generated.")
+    else:
+        record.ai_report_error = result.error or "Unknown error."
+        record.save(update_fields=["ai_report_error", "updated_at"])
+        messages.error(request, result.error or "Report generation failed.")
+
+    return redirect("investigation_osint:detail", pk=record.pk)
 
 
 @login_required

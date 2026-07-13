@@ -49,6 +49,37 @@
 {% endif %}
 
 <div class="ov-panel" style="margin-bottom: var(--ov-space-6);">
+  <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--ov-space-4); flex-wrap: wrap;">
+    <div>
+      <h3 class="ov-panel__title">AI-generated narrative report</h3>
+      <p class="ov-caption" style="margin-top: var(--ov-space-2);">
+        Groq-generated synthesis of the findings above — written only from this investigation's
+        own data, never invented. This supplements, not replaces, manual verification.
+        {% if record.ai_report_generated_at %}Last generated {{ record.ai_report_generated_at }}
+        {% if record.ai_report_model %}using {{ record.ai_report_model }}{% endif %}.{% endif %}
+      </p>
+    </div>
+    <form method="post" action="{% url 'investigation_osint:generate_ai_report' record.pk %}">
+      {% csrf_token %}
+      <button type="submit" class="ov-btn ov-btn--secondary">
+        {% if record.ai_report %}Regenerate{% else %}Generate report{% endif %}
+      </button>
+    </form>
+  </div>
+
+  {% if record.ai_report %}
+  <div class="ov-text-secondary" style="margin-top: var(--ov-space-4); white-space: pre-wrap; line-height: 1.7;">{{ record.ai_report }}</div>
+  {% elif record.ai_report_error %}
+  <div class="ov-alert ov-alert--danger" style="margin-top: var(--ov-space-4);">{{ record.ai_report_error }}</div>
+  {% else %}
+  <p class="ov-caption" style="margin-top: var(--ov-space-4);">
+    No report generated yet. Requires a free Groq API key set as <code>GROQ_API_KEY</code> —
+    get one at <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer">console.groq.com/keys</a>.
+  </p>
+  {% endif %}
+</div>
+
+<div class="ov-panel" style="margin-bottom: var(--ov-space-6);">
   <h3 class="ov-panel__title">Entity map</h3>
   <p class="ov-caption" style="margin-top: var(--ov-space-2); margin-bottom: var(--ov-space-4);">
     Everything this investigation discovered while pivoting from {{ record.target_domain }}.

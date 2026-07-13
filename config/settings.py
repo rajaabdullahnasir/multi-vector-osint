@@ -156,6 +156,17 @@ IP_GEOLOCATION_API_BASE = os.environ.get(
 IP_GEOLOCATION_USER_AGENT = "OSINT-Vector-Analyzer-FYP"
 IP_GEOLOCATION_MIN_REQUEST_INTERVAL = 1.4
 
+# Module 11 — AI-generated narrative report (Groq, OpenAI-compatible, free tier)
+# GROQ_API_KEY is required for this feature only — everything else in the
+# app works with zero AI dependency. Get a free key at https://console.groq.com
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GROQ_API_BASE = os.environ.get("GROQ_API_BASE", "https://api.groq.com/openai/v1")
+# gpt-oss-120b for report-writing quality; gpt-oss-20b is faster if preferred.
+# Groq deprecated the older llama-3.x chat models — don't revert to those.
+GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
+GROQ_HTTP_TIMEOUT_SECONDS = 90
+GROQ_MAX_COMPLETION_TOKENS = 3000
+
 # Account lockout (SRS-12)
 AUTH_LOCKOUT_MAX_ATTEMPTS = 5
 AUTH_LOCKOUT_MINUTES = 15
