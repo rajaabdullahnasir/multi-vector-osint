@@ -40,6 +40,30 @@ class RunInvestigationViewTests(TestCase):
         data = json.loads(response.content)
         self.assertFalse(data["ok"])
 
+    def test_422_response_always_has_a_readable_error_message(self):
+        """
+        Regression test: the JSON response used to only include per-field
+        errors under "errors", with no top-level "error" string. The JS
+        client only checked "error", so it silently fell back to a useless
+        generic message on every real validation failure — a live user hit
+        this exact bug (three blind retries with no visible reason why).
+        Both the per-field dict AND a flat readable message must be present
+        so no client shape mismatch can hide the real error again.
+        """
+        response = self.client.post(
+            self.url,
+            {"domain": "https://not-a-bare-domain.com"},
+            HTTP_X_REQUESTED_WITH="XMLHttpRequest",
+            HTTP_ACCEPT="application/json",
+        )
+        self.assertEqual(response.status_code, 422)
+        data = json.loads(response.content)
+        self.assertIn("errors", data)
+        self.assertIn("domain", data["errors"])
+        self.assertIn("error", data)
+        self.assertTrue(data["error"].strip())  # must not be blank
+        self.assertIn("URL", data["error"])  # the actual validator message, not a generic fallback
+
     @patch("investigation_osint.views.InvestigationEngine")
     def test_successful_investigation_saves_and_redirects(self, mock_engine_cls):
         mock_engine_cls.return_value.run.return_value = InvestigationReport(

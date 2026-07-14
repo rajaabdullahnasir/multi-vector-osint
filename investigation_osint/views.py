@@ -44,13 +44,22 @@ def run_investigation(request):
 
     if not form.is_valid():
         if wants_json:
+            errors_by_field = {
+                field: [str(e) for e in errs] for field, errs in form.errors.items()
+            }
+            # Both a per-field dict AND a flat readable string, so a client
+            # only checking one shape (as investigation.js used to) still
+            # gets a real message instead of silently falling back to a
+            # generic one.
+            flat_message = " ".join(
+                msg for errs in errors_by_field.values() for msg in errs
+            )
             return JsonResponse(
                 {
                     "ok": False,
                     "validation_failed": True,
-                    "errors": {
-                        field: [str(e) for e in errs] for field, errs in form.errors.items()
-                    },
+                    "errors": errors_by_field,
+                    "error": flat_message or "Please fix the highlighted field(s).",
                 },
                 status=422,
             )

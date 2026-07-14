@@ -120,7 +120,23 @@
         }
 
         if (!response.ok || !data.ok) {
-          showAlert(data.error || "Investigation could not be completed.", "danger");
+          // The server returns per-field errors under "errors" (a dict) for
+          // form validation failures, and a single "error" string for
+          // engine-level failures (e.g. domain resolution). Checking only
+          // "error" silently swallowed every validation message and showed
+          // a useless generic fallback instead — this is the actual fix.
+          let message = data.error;
+          if (!message && data.errors) {
+            const parts = [];
+            for (const field in data.errors) {
+              const errs = data.errors[field];
+              if (Array.isArray(errs)) {
+                parts.push(...errs);
+              }
+            }
+            message = parts.join(" ");
+          }
+          showAlert(message || "Investigation could not be completed.", "danger");
           return;
         }
 
