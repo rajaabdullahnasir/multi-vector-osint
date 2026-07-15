@@ -149,3 +149,70 @@ class GenerateAiReportViewTests(TestCase):
         self.client.login(username="airptother@test.com", password="TestPass1!")
         response = self.client.post(self.url)
         self.assertEqual(response.status_code, 404)
+
+
+class CompactSummaryRegressionTests(TestCase):
+    """
+    Regression tests for a real bug found via live testing: a domain with
+    77 subdomains produced a raw JSON dump needing 14329 tokens against
+    Groq's free-tier 8000 TPM limit for openai/gpt-oss-120b, so report
+    generation failed outright. The compact summary builder must keep
+    large investigations well within a safe token budget.
+    """
+
+    def _large_investigation_data(self, subdomain_count=77):
+        subdomains = [
+            {"id": f"host{i}.example.com", "type": "subdomain", "label": f"host{i}.example.com"}
+            for i in range(subdomain_count)
+        ]
+        outcomes = [
+            {
+                "module": "subdomain",
+                "label": "Subdomain Finder",
+                "summary": f"{subdomain_count} host(s) discovered.",
+                "ok": True,
+                "risk_contribution": ["Large subdomain footprint — review exposed services."],
+            }
+        ]
+        return {
+            "domain": "example.com",
+            "modules_run": ["whois", "subdomain", "org-footprint", "url-risk"],
+            "outcomes": outcomes,
+            "nodes": [{"id": "example.com", "type": "domain", "label": "example.com"}] + subdomains,
+            "edges": [],
+            "risk_flags": ["[Subdomain] Large subdomain footprint — review exposed services."],
+        }
+
+    def test_compact_summary_caps_examples_per_type(self):
+        from investigation_osint.services.ai_report_client import _compact_investigation_summary
+
+        compact = _compact_investigation_summary(self._large_investigation_data())
+        subdomain_entry = compact["discovered_entities"]["subdomain"]
+        self.assertEqual(subdomain_entry["count"], 77)
+        self.assertLessEqual(len(subdomain_entry["examples"]), 15)
+        self.assertTrue(subdomain_entry["truncated"])
+
+    def test_compact_summary_does_not_duplicate_risk_flags_per_outcome(self):
+        from investigation_osint.services.ai_report_client import _compact_investigation_summary
+
+        compact = _compact_investigation_summary(self._large_investigation_data())
+        for outcome in compact["module_outcomes"]:
+            self.assertNotIn("risk_contribution", outcome)
+        # Exactly one copy lives in consolidated_risk_flags.
+        self.assertEqual(len(compact["consolidated_risk_flags"]), 1)
+
+    @override_settings(GROQ_API_KEY="fake-key-123")
+    @patch("investigation_osint.services.ai_report_client.requests.post")
+    def test_large_investigation_stays_under_safe_token_budget(self, mock_post):
+        mock_post.return_value = Mock(
+            status_code=200,
+            json=lambda: {"choices": [{"message": {"content": "narrative"}}]},
+        )
+        GroqReportClient().generate(self._large_investigation_data(subdomain_count=200))
+
+        sent_payload = mock_post.call_args.kwargs["json"]
+        sent_content = sent_payload["messages"][1]["content"]
+        # Rough char-based proxy for the same token estimate used in
+        # production — must stay comfortably under the free-tier cap.
+        estimated_tokens = len(sent_content) // 4
+        self.assertLess(estimated_tokens, 5000)

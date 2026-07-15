@@ -165,7 +165,8 @@ GROQ_API_BASE = os.environ.get("GROQ_API_BASE", "https://api.groq.com/openai/v1"
 # Groq deprecated the older llama-3.x chat models — don't revert to those.
 GROQ_MODEL = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
 GROQ_HTTP_TIMEOUT_SECONDS = 90
-GROQ_MAX_COMPLETION_TOKENS = 3000
+GROQ_MAX_COMPLETION_TOKENS = 2000  # free tier TPM is tight (e.g. 8000 for gpt-oss-120b); leave headroom for input
+GROQ_SAFE_TOKEN_BUDGET = 7000  # trim harder if the estimated request would exceed this
 
 # Account lockout (SRS-12)
 AUTH_LOCKOUT_MAX_ATTEMPTS = 5
