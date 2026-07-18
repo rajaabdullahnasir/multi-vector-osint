@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "org_footprint_osint.apps.OrgFootprintOsintConfig",
     "ip_intel_osint.apps.IpIntelOsintConfig",
     "investigation_osint.apps.InvestigationOsintConfig",
+    "dirbuster_osint.apps.DirbusterOsintConfig",
 ]
 
 MIDDLEWARE = [

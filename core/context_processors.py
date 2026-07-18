@@ -100,6 +100,15 @@ MODULE_NAV = [
         "abbr": "IV",
         "available": True,
     },
+    {
+        "slug": "dirbuster",
+        "name": "Directory Buster",
+        "description": "Brute-force common paths with built-in wordlists and automatic soft-404 filtering",
+        "url_name": "dirbuster_osint:home",
+        "icon": "folder-search",
+        "abbr": "DB",
+        "available": True,
+    },
 ]
 
 NAMESPACE_TO_MODULE_SLUG = {
@@ -114,6 +123,7 @@ NAMESPACE_TO_MODULE_SLUG = {
     "org_footprint_osint": "org-footprint",
     "ip_intel_osint": "ip-intel",
     "investigation_osint": "investigation",
+    "dirbuster_osint": "dirbuster",
 }
 
 MODULE_ICON_BY_SLUG = {item["slug"]: item["icon"] for item in MODULE_NAV}

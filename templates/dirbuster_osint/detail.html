@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}{{ record.host }} — Directory Buster{% endblock %}
+{% block page_heading %}Directory buster results{% endblock %}
+{% block content %}
+{% url 'dirbuster_osint:export_json' record.pk as export_url %}
+{% url 'dirbuster_osint:home' as back_url %}
+{% url 'dirbuster_osint:delete' record.pk as delete_url %}
+{% include "partials/report_bar.html" with report_label="Dirbuster" report_title=record.host report_meta=record.created_at export_url=export_url back_url=back_url delete_url=delete_url delete_confirm="Delete this scan?" %}
+
+{% if record.status == 'failed' %}
+<div class="ov-alert ov-alert--danger">{{ record.error_message }}</div>
+{% else %}
+
+<div class="ov-report-meta">
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Found (2xx)</div>
+    <div class="ov-report-meta__value">{{ record.found_count }}</div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Redirects</div>
+    <div class="ov-report-meta__value">{{ record.redirect_count }}</div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Forbidden</div>
+    <div class="ov-report-meta__value">{{ record.forbidden_count }}</div>
+  </div>
+  <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Filtered (soft-404)</div>
+    <div class="ov-report-meta__value">{{ record.filtered_count }}</div>
+  </div>
+</div>
+
+{% if risk_flags %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-6);">
+  <h3 class="ov-panel__title">Risk flags</h3>
+  <ul class="ov-text-secondary" style="margin: var(--ov-space-4) 0 0; padding-left: 1.1rem; line-height: 1.7; color: var(--ov-color-warning);">
+    {% for flag in risk_flags %}
+    <li>{{ flag }}</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% for section_name, section_fields in sections.items %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);">
+  <h3 class="ov-panel__title">{{ section_name }}</h3>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <tbody>
+        {% for label, val in section_fields.items %}
+        <tr>
+          <th style="width: 36%; font-weight: 500;">{{ label }}</th>
+          <td style="word-break: break-word;">{{ val }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endfor %}
+
+{% if found %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);">
+  <h3 class="ov-panel__title">Found ({{ found|length }})</h3>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <thead><tr><th>Path</th><th>Status</th><th>Size</th><th></th></tr></thead>
+      <tbody>
+        {% for e in found %}
+        <tr>
+          <td class="ov-table__mono">/{{ e.path }}</td>
+          <td><span class="ov-status ov-status--ok">{{ e.status_code }}</span></td>
+          <td class="ov-caption">{{ e.content_length }} bytes</td>
+          <td><a class="ov-link" href="{{ e.url }}" target="_blank" rel="noopener noreferrer">Open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if forbidden %}
+<div class="ov-panel" style="margin-bottom: var(--ov-space-4);">
+  <h3 class="ov-panel__title">Forbidden — exists but restricted ({{ forbidden|length }})</h3>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <thead><tr><th>Path</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+        {% for e in forbidden %}
+        <tr>
+          <td class="ov-table__mono">/{{ e.path }}</td>
+          <td><span class="ov-status ov-status--neutral">{{ e.status_code }}</span></td>
+          <td><a class="ov-link" href="{{ e.url }}" target="_blank" rel="noopener noreferrer">Open</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{% if redirects %}
+<details class="ov-panel" style="margin-bottom: var(--ov-space-4);">
+  <summary class="ov-panel__title" style="cursor: pointer;">Redirects ({{ redirects|length }})</summary>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <thead><tr><th>Path</th><th>Status</th><th>Location</th></tr></thead>
+      <tbody>
+        {% for e in redirects %}
+        <tr>
+          <td class="ov-table__mono">/{{ e.path }}</td>
+          <td class="ov-caption">{{ e.status_code }}</td>
+          <td class="ov-caption" style="word-break: break-word;">{{ e.redirect_location|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</details>
+{% endif %}
+
+{% if filtered %}
+<details class="ov-panel" style="margin-bottom: var(--ov-space-4);">
+  <summary class="ov-panel__title" style="cursor: pointer;">Filtered as soft-404 ({{ filtered|length }})</summary>
+  <p class="ov-caption" style="margin-top: var(--ov-space-2);">
+    These matched the baseline signature for a nonexistent path on this server — automatically
+    excluded from "Found" as false positives. Shown here for transparency, not hidden.
+  </p>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <thead><tr><th>Path</th><th>Status</th><th>Size</th></tr></thead>
+      <tbody>
+        {% for e in filtered %}
+        <tr>
+          <td class="ov-table__mono">/{{ e.path }}</td>
+          <td class="ov-caption">{{ e.status_code }}</td>
+          <td class="ov-caption">{{ e.content_length }} bytes</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</details>
+{% endif %}
+
+{% if errored %}
+<details class="ov-panel" style="margin-bottom: var(--ov-space-4);">
+  <summary class="ov-panel__title" style="cursor: pointer; color: var(--ov-color-warning);">Errors / timeouts ({{ errored|length }})</summary>
+  <p class="ov-caption" style="margin-top: var(--ov-space-2);">
+    These requests failed outright — NOT confirmed as absent, just unverified.
+  </p>
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-4); border: none;">
+    <table class="ov-table">
+      <thead><tr><th>Path</th><th>Reason</th></tr></thead>
+      <tbody>
+        {% for e in errored %}
+        <tr>
+          <td class="ov-table__mono">/{{ e.path }}</td>
+          <td class="ov-caption">{{ e.error_reason }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</details>
+{% endif %}
+
+{% endif %}
+{% endblock %}

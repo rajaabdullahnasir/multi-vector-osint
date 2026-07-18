@@ -19,6 +19,7 @@ class SubdomainScan(models.Model):
     domain = models.CharField(max_length=253, db_index=True)
     subdomain_count = models.PositiveSmallIntegerField(default=0)
     dns_verified_count = models.PositiveSmallIntegerField(default=0)
+    live_host_count = models.PositiveSmallIntegerField(default=0)
     status = models.CharField(
         max_length=16,
         choices=Status.choices,

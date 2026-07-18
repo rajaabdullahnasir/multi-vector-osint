@@ -66,6 +66,7 @@ def _execute_scan(user, domain: str) -> dict:
         error_message="",
         subdomain_count=report.subdomain_count,
         dns_verified_count=report.dns_verified_count,
+        live_host_count=report.live_host_count,
         sources_used=report.sources_used or [],
         risk_flags=report.risk_flags or [],
         report_json=report.to_storage_dict(),

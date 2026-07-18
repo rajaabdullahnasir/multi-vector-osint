@@ -18,6 +18,7 @@ Web platform for ethical, passive OSINT — built for iSeeWaves / FYP specificat
 | 9. Company / Domain Footprint | ✅ Complete |
 | 10. Geolocation / IP Intelligence | ✅ Complete |
 | 11. Investigation (Multi-Vector Correlation) | ✅ Complete |
+| 12. Directory Buster | ✅ Complete |
 
 ## Quick start
 
@@ -46,6 +47,7 @@ See `design-system/DESIGN_SYSTEM.md`. App templates use `ov-*` classes via `them
 - [Module 9 — Company / Domain Footprint](docs/MODULE_09_ORG_FOOTPRINT.md)
 - [Module 10 — Geolocation / IP Intelligence](docs/MODULE_10_IP_INTEL.md)
 - [Module 11 — Investigation (Multi-Vector Correlation)](docs/MODULE_11_INVESTIGATION.md)
+- [Module 12 — Directory Buster](docs/MODULE_12_DIRBUSTER.md)
 
 ### Email Breach (XposedOrNot)
 

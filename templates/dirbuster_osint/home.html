@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load static ov_icons %}
+{% block title %}Directory Buster — OSINT Vector{% endblock %}
+{% block page_heading %}Directory buster{% endblock %}
+{% block page_lead %}<p class="ov-page-lead">Brute-forces common paths against a target using built-in wordlists, with automatic soft-404 detection so a catch-all site doesn't flood you with false positives. Only scan sites you're authorized to test.</p>{% endblock %}
+{% block content %}
+<div class="ov-workspace">
+  <section class="ov-panel" data-module="dirbuster">
+    <header class="ov-panel__head">
+      <h2 class="ov-panel__title">Run a scan</h2>
+      <p class="ov-panel__lead">Enter a target and pick a wordlist tier — quick is fastest, extended is most thorough.</p>
+    </header>
+    <form
+      method="post"
+      action="{% url 'dirbuster_osint:scan' %}"
+      data-dirbuster-form
+      data-scan-url="{% url 'dirbuster_osint:scan' %}"
+      novalidate
+    >
+      {% csrf_token %}
+      <div class="ov-field">
+        <label class="ov-field__label" for="id_target">{{ form.target.label }}</label>
+        {{ form.target }}
+        {% if form.target.errors %}
+        <p class="ov-caption js-target-error" style="color: var(--ov-color-danger);">{{ form.target.errors.0 }}</p>
+        {% else %}
+        <p class="ov-caption">{{ form.target.help_text }}</p>
+        {% endif %}
+      </div>
+      <div class="ov-field">
+        <label class="ov-field__label" for="id_wordlist_tier">{{ form.wordlist_tier.label }}</label>
+        {{ form.wordlist_tier }}
+      </div>
+      <button type="submit" class="ov-btn ov-btn--primary ov-btn--icon" id="dirbuster-submit-btn">
+        {% ov_icon "folder-search" size="sm" %}
+        <span>Run scan</span>
+      </button>
+    </form>
+  </section>
+</div>
+
+<div id="dirbuster-loader" class="ov-loader-overlay" aria-hidden="true">
+  <div class="ov-loader-card">
+    <div class="ov-spinner" aria-hidden="true"></div>
+    <p class="ov-loader__title">Busting directories</p>
+    <p class="ov-loader__domain js-loader-target"></p>
+    <p class="ov-loader__status js-loader-status">Calibrating soft-404 baseline…</p>
+    <div class="ov-progress"><div class="ov-progress__bar ov-progress__bar--indeterminate"></div></div>
+  </div>
+</div>
+
+{% if records %}
+<section class="ov-section">
+  <div class="ov-section__head">
+    <h2 class="ov-section__title">Recent scans</h2>
+  </div>
+  <div class="ov-table-wrap">
+    <table class="ov-table">
+      <thead>
+        <tr>
+          <th>Target</th>
+          <th>Wordlist</th>
+          <th>Found</th>
+          <th>Forbidden</th>
+          <th>Filtered</th>
+          <th>Status</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in records %}
+        <tr>
+          <td class="ov-table__mono">{{ row.host|default:row.target }}</td>
+          <td class="ov-caption">{{ row.wordlist_tier|default:"—" }}</td>
+          <td>{{ row.found_count }}</td>
+          <td>{{ row.forbidden_count }}</td>
+          <td>{{ row.filtered_count }}</td>
+          <td>
+            {% if row.status == 'completed' %}
+            <span class="ov-status ov-status--ok">Done</span>
+            {% elif row.status == 'failed' %}
+            <span class="ov-status ov-status--bad">Failed</span>
+            {% else %}
+            <span class="ov-status ov-status--neutral">Pending</span>
+            {% endif %}
+          </td>
+          <td><a class="ov-link ov-link--icon" href="{% url 'dirbuster_osint:detail' row.pk %}">{% ov_icon "eye" size="sm" %}<span>Open</span></a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<script src="{% static 'dirbuster_osint/dirbuster.js' %}"></script>
+{% endblock %}

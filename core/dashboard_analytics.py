@@ -7,6 +7,7 @@ from django.db.models import Count, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
 
+from dirbuster_osint.models import DirBusterScan
 from email_breach_osint.models import EmailBreachCheck
 from image_osint.models import ImageAnalysis
 from investigation_osint.models import Investigation
@@ -33,6 +34,7 @@ MODULE_MODELS = {
     "org-footprint": ("Company Footprint", OrgFootprint),
     "ip-intel": ("IP Intelligence", IPIntelligence),
     "investigation": ("Investigation", Investigation),
+    "dirbuster": ("Directory Buster", DirBusterScan),
 }
 
 
@@ -113,7 +115,7 @@ def build_dashboard_analytics(user) -> dict:
         },
         {
             "label": "Active modules",
-            "value": f"{modules_used}/11",
+            "value": f"{modules_used}/12",
             "hint": "Modules you have used at least once",
             "icon": "layers",
         },

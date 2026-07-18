@@ -42,6 +42,10 @@ urlpatterns = [
         "investigation/",
         include(("investigation_osint.urls", "investigation_osint")),
     ),
+    path(
+        "modules/dirbuster/",
+        include(("dirbuster_osint.urls", "dirbuster_osint")),
+    ),
 ]
 
 if settings.DEBUG:

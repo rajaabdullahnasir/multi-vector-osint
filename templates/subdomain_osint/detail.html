@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load ov_icons %}
 {% block title %}{{ scan.domain }} — Subdomains{% endblock %}
 {% block page_heading %}Subdomain scan{% endblock %}
 {% block content %}
@@ -27,6 +28,10 @@
     <div class="ov-report-meta__value">{{ scan.dns_verified_count }}</div>
   </div>
   <div class="ov-report-meta__item">
+    <div class="ov-report-meta__label">Live web hosts</div>
+    <div class="ov-report-meta__value">{{ scan.live_host_count }}</div>
+  </div>
+  <div class="ov-report-meta__item">
     <div class="ov-report-meta__label">Sources</div>
     <div class="ov-report-meta__value">{{ scan.sources_used|join:", "|default:"—" }}</div>
   </div>
@@ -53,7 +58,9 @@
           <th>Host</th>
           <th>Sources</th>
           <th>DNS</th>
-          <th>Records</th>
+          <th>HTTP</th>
+          <th>Title / Server</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -68,7 +75,23 @@
             <span class="ov-status ov-status--neutral">CT only</span>
             {% endif %}
           </td>
-          <td style="word-break: break-word;">{{ row.records|join:" · "|default:"—" }}</td>
+          <td>
+            {% if row.http_live %}
+            <span class="ov-status ov-status--ok">{{ row.http_scheme|upper }} {{ row.http_status }}</span>
+            {% elif row.dns_verified %}
+            <span class="ov-status ov-status--bad">No response</span>
+            {% else %}
+            <span class="ov-caption">—</span>
+            {% endif %}
+          </td>
+          <td class="ov-caption" style="word-break: break-word;">
+            {{ row.http_title|default:"" }}{% if row.http_title and row.http_server %} · {% endif %}{{ row.http_server|default:"" }}
+          </td>
+          <td>
+            {% if row.http_live %}
+            <a class="ov-link ov-link--icon" href="{% url 'dirbuster_osint:home' %}?target={{ row.http_scheme }}://{{ row.host }}/">{% ov_icon "search" size="sm" %}<span>Bust dirs</span></a>
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>
