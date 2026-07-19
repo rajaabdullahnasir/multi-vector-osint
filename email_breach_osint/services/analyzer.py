@@ -1,7 +1,15 @@
 """
-Email breach check — XposedOrNot check-email, plus Gravatar reverse
+Email breach check - XposedOrNot check-email, plus Gravatar reverse
 lookup and Holehe-style account existence checks under "Email
 Intelligence" (SRS-23, SRS-25).
+
+Breach checking and Email Intelligence are independent: XposedOrNot is
+region-blocked by Cloudflare for some networks (observed live: Pakistani
+IPs get HTTP 403), but Gravatar and the Holehe-style checks are unrelated
+free services unaffected by that block. A failure in one must not take
+down the other - this used to short-circuit the whole report on any
+XposedOrNot failure, silently discarding intelligence that had nothing
+to do with the failure.
 """
 
 from __future__ import annotations
@@ -30,6 +38,7 @@ class EmailBreachReport:
     has_gravatar: bool = False
     gravatar_name: str = ""
     accounts_found: list[str] | None = None
+    breach_check_failed: bool = False
 
     def to_storage_dict(self) -> dict[str, Any]:
         return {
@@ -46,6 +55,7 @@ class EmailBreachReport:
             "has_gravatar": self.has_gravatar,
             "gravatar_name": self.gravatar_name,
             "accounts_found": self.accounts_found,
+            "breach_check_failed": self.breach_check_failed,
         }
 
 
@@ -73,32 +83,30 @@ class EmailBreachAnalyzer:
             },
         }
 
-        result: BreachCheckResult = check_breached_account(email)
-        if not result.ok:
-            return EmailBreachReport(
-                success=False,
-                email=email,
-                error=result.error,
-                sections=sections,
-            )
+        breach_result: BreachCheckResult = check_breached_account(email)
+        breach_check_failed = not breach_result.ok
+        breach_count = 0
+        is_pwned = False
+        breaches_payload: list[dict[str, Any]] = []
 
-        breaches_payload = [b.to_dict() for b in result.breaches]
-        breach_count = result.breach_count
-        is_pwned = breach_count > 0
-
-        sections["Summary"] = {
-            "Breach count": str(breach_count),
-            "Status": "Exposed in known breaches" if is_pwned else "No breaches found",
-        }
-        if result.api_status:
-            sections["Summary"]["API status"] = result.api_status
-
-        if is_pwned:
-            sections["Breaches"] = {
-                f"{i + 1}": name for i, name in enumerate(b.name for b in result.breaches)
+        if breach_check_failed:
+            sections["Summary"] = {"Notice": breach_result.error or "Breach check failed."}
+        else:
+            breaches_payload = [b.to_dict() for b in breach_result.breaches]
+            breach_count = breach_result.breach_count
+            is_pwned = breach_count > 0
+            sections["Summary"] = {
+                "Breach count": str(breach_count),
+                "Status": "Exposed in known breaches" if is_pwned else "No breaches found",
             }
+            if breach_result.api_status:
+                sections["Summary"]["API status"] = breach_result.api_status
+            if is_pwned:
+                sections["Breaches"] = {
+                    f"{i + 1}": name for i, name in enumerate(b.name for b in breach_result.breaches)
+                }
 
-        # --- Email Intelligence: Gravatar reverse lookup + account checks ---
+        # --- Email Intelligence: independent of breach-check success/failure ---
         gravatar = self.gravatar_client.lookup(email)
         accounts_found: list[str] = []
 
@@ -142,31 +150,43 @@ class EmailBreachAnalyzer:
                 "account doesn't exist."
             )
 
-        risk_flags = self._derive_risk_flags(result, gravatar, accounts_found)
+        risk_flags = self._derive_risk_flags(breach_result, breach_check_failed, accounts_found)
+
+        # The report is a success (has real content worth showing) if EITHER
+        # the breach check or the intelligence checks produced something -
+        # only fail outright if literally everything failed.
+        overall_success = not breach_check_failed or gravatar.success or bool(check_rows)
 
         return EmailBreachReport(
-            success=True,
-            email=result.email or email,
+            success=overall_success,
+            email=email,
+            error=breach_result.error if (breach_check_failed and not overall_success) else None,
             breach_count=breach_count,
             is_pwned=is_pwned,
             sections=sections,
             breaches=breaches_payload,
             risk_flags=risk_flags,
-            no_breaches=result.no_breaches,
+            no_breaches=(not breach_check_failed and breach_count == 0),
             has_gravatar=gravatar.has_avatar or gravatar.has_public_profile,
             gravatar_name=gravatar.display_name,
             accounts_found=accounts_found,
+            breach_check_failed=breach_check_failed,
         )
 
     def _derive_risk_flags(
-        self, result: BreachCheckResult, gravatar, accounts_found: list[str]
+        self, breach_result: BreachCheckResult, breach_check_failed: bool, accounts_found: list[str]
     ) -> list[str]:
         flags: list[str] = []
-        if result.no_breaches or result.breach_count == 0:
+        if breach_check_failed:
+            flags.append(
+                f"Breach check (XposedOrNot) failed: {breach_result.error or 'unknown error'}. "
+                "Email Intelligence results below are independent and still valid."
+            )
+        elif breach_result.no_breaches or breach_result.breach_count == 0:
             flags.append("No known public breaches for this address in XposedOrNot.")
         else:
             flags.append(
-                f"Email found in {result.breach_count} breach(es) — rotate passwords and enable MFA."
+                f"Email found in {breach_result.breach_count} breach(es) — rotate passwords and enable MFA."
             )
         if accounts_found:
             flags.append(

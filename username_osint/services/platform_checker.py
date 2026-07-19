@@ -4,6 +4,8 @@ Parallel HTTP checks against public profile URLs (passive OSINT).
 
 from __future__ import annotations
 
+import random
+import string
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
@@ -206,6 +208,8 @@ def scan_username(username: str) -> PlatformScanResult:
                 platform = futures[future]
                 warnings.append(f"{platform.name}: {exc}")
 
+    hits = _filter_soft_200_false_positives(hits, platforms)
+
     hits.sort(key=lambda h: (not h.found, h.platform.lower()))
     return PlatformScanResult(
         success=True,
@@ -214,3 +218,67 @@ def scan_username(username: str) -> PlatformScanResult:
         checked_count=len(platforms),
         warnings=warnings,
     )
+
+
+def _filter_soft_200_false_positives(
+    hits: list[PlatformHit], platforms: tuple[Platform, ...]
+) -> list[PlatformHit]:
+    """
+    Baseline calibration against a random, definitely-nonexistent username —
+    the same technique used in the Directory Buster module for soft-404
+    detection, applied here for the mirror problem: modern SPA sites that
+    return HTTP 200 for any profile URL regardless of whether the account
+    exists. Observed live: a single scan returned 19 "found" hits across
+    unrelated platforms (AniList, Crates.io, HackerRank, PyPI, Trello, Kik)
+    for an unusual, domain-like username — a strong signal several of
+    those were false positives, not real accounts.
+
+    Only re-checks platforms that came back "found" in the real scan, to
+    avoid doubling the full request count unnecessarily.
+    """
+    found_hits = [h for h in hits if h.found]
+    if not found_hits:
+        return hits
+
+    platform_by_name = {p.name: p for p in platforms}
+    baseline_username = "zz" + "".join(
+        random.choices(string.ascii_lowercase + string.digits, k=22)
+    )
+
+    workers = min(_max_workers(), len(found_hits))
+    baseline_results: dict[str, PlatformHit] = {}
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {
+            pool.submit(_check_one, platform_by_name[h.platform], baseline_username): h.platform
+            for h in found_hits
+            if h.platform in platform_by_name
+        }
+        for future in as_completed(futures):
+            platform_name = futures[future]
+            try:
+                baseline_results[platform_name] = future.result()
+            except Exception:
+                continue  # baseline check itself failing doesn't invalidate the real hit
+
+    adjusted: list[PlatformHit] = []
+    for hit in hits:
+        baseline = baseline_results.get(hit.platform)
+        if hit.found and baseline is not None and baseline.found:
+            adjusted.append(
+                PlatformHit(
+                    platform=hit.platform,
+                    category=hit.category,
+                    url=hit.url,
+                    status_code=hit.status_code,
+                    found=False,
+                    inconclusive=True,
+                    inconclusive_reason=(
+                        "This platform returned a positive result for a random, "
+                        "definitely-nonexistent username too — likely a soft-200 "
+                        "response (SPA app shell) rather than a real account match."
+                    ),
+                )
+            )
+        else:
+            adjusted.append(hit)
+    return adjusted

@@ -169,3 +169,63 @@ class AnalyzerEmailIntelligenceIntegrationTests(SimpleTestCase):
         report = EmailBreachAnalyzer().analyze("nobody@gmail.com")
         self.assertFalse(report.has_gravatar)
         self.assertEqual(report.accounts_found, [])
+
+
+class BreachCheckFailureDecouplingRegressionTests(SimpleTestCase):
+    """
+    Regression test for a real bug found via live testing: XposedOrNot
+    returned HTTP 403 (Cloudflare geo-block on Pakistani IPs), which used
+    to short-circuit the ENTIRE report before Gravatar/Holehe ever ran -
+    even though those are completely independent, unaffected services.
+    """
+
+    @patch("email_breach_osint.services.analyzer.check_breached_account")
+    @patch("email_breach_osint.services.analyzer.HoleheStyleChecker")
+    @patch("email_breach_osint.services.analyzer.GravatarClient")
+    def test_breach_check_failure_does_not_block_gravatar_and_holehe(
+        self, mock_gravatar_cls, mock_holehe_cls, mock_breach_check
+    ):
+        from email_breach_osint.services.analyzer import EmailBreachAnalyzer
+        from email_breach_osint.services.gravatar_client import GravatarResult
+        from email_breach_osint.services.holehe_client import AccountCheckResult
+        from email_breach_osint.services.xposedornot_client import BreachCheckResult
+
+        mock_breach_check.return_value = BreachCheckResult(
+            ok=False, error="XposedOrNot returned HTTP 403 from your network."
+        )
+        mock_gravatar_cls.return_value.lookup.return_value = GravatarResult(
+            success=True, has_avatar=True, has_public_profile=True, display_name="Jane Doe"
+        )
+        mock_holehe_cls.return_value.check_all.return_value = [
+            AccountCheckResult(platform="Duolingo", registered=True, detail="found")
+        ]
+
+        report = EmailBreachAnalyzer().analyze("jane@gmail.com")
+
+        # The overall report must still succeed - it has real content.
+        self.assertTrue(report.success)
+        self.assertTrue(report.breach_check_failed)
+        self.assertTrue(report.has_gravatar)
+        self.assertIn("Duolingo", report.accounts_found)
+        self.assertIn("Email Intelligence — Gravatar", report.sections)
+        self.assertIn("Email Intelligence — Account Checks", report.sections)
+        joined = " ".join(report.risk_flags)
+        self.assertIn("Breach check", joined)
+        self.assertIn("independent and still valid", joined)
+
+    @patch("email_breach_osint.services.analyzer.check_breached_account")
+    @patch("email_breach_osint.services.analyzer.HoleheStyleChecker")
+    @patch("email_breach_osint.services.analyzer.GravatarClient")
+    def test_everything_failing_is_a_genuine_failure(
+        self, mock_gravatar_cls, mock_holehe_cls, mock_breach_check
+    ):
+        from email_breach_osint.services.analyzer import EmailBreachAnalyzer
+        from email_breach_osint.services.gravatar_client import GravatarResult
+        from email_breach_osint.services.xposedornot_client import BreachCheckResult
+
+        mock_breach_check.return_value = BreachCheckResult(ok=False, error="down")
+        mock_gravatar_cls.return_value.lookup.return_value = GravatarResult(success=False, error="down")
+        mock_holehe_cls.return_value.check_all.return_value = []
+
+        report = EmailBreachAnalyzer().analyze("jane@gmail.com")
+        self.assertFalse(report.success)
