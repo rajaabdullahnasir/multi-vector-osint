@@ -157,6 +157,13 @@ IP_GEOLOCATION_API_BASE = os.environ.get(
 IP_GEOLOCATION_USER_AGENT = "OSINT-Vector-Analyzer-FYP"
 IP_GEOLOCATION_MIN_REQUEST_INTERVAL = 1.4
 
+# Module 1 — Geolocation context (Nominatim reverse geocoding + Overpass API)
+# Nominatim's usage policy requires an identifying User-Agent — customize
+# this if deploying publicly.
+OSM_USER_AGENT = os.environ.get(
+    "OSM_USER_AGENT", "OSINT-Vector-Analyzer-FYP (contact: set OSM_USER_AGENT)"
+)
+
 # Module 11 — AI-generated narrative report (Groq, OpenAI-compatible, free tier)
 # GROQ_API_KEY is required for this feature only — everything else in the
 # app works with zero AI dependency. Get a free key at https://console.groq.com

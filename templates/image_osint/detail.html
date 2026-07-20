@@ -198,6 +198,94 @@
 
 {% endif %}
 
+{% if geo_context %}
+
+<div class="ov-panel" style="margin-bottom: var(--ov-space-6);">
+
+  <h3 class="ov-panel__title ov-panel__title-row">{% ov_icon "map-pin" size="sm" %}<span>Geolocation context (OpenStreetMap)</span></h3>
+
+  <p class="ov-caption" style="margin-top: var(--ov-space-2);">Reverse geocoding and nearby named landmarks via Nominatim + Overpass — free, no API key.</p>
+
+  {% if geo_context.address %}
+
+  <p class="ov-text-secondary" style="margin-top: var(--ov-space-4);">{{ geo_context.address }}</p>
+
+  {% elif geo_context.address_error %}
+
+  <p class="ov-caption" style="margin-top: var(--ov-space-4); color: var(--ov-color-warning);">{{ geo_context.address_error }}</p>
+
+  {% endif %}
+
+  <div style="display: flex; gap: var(--ov-space-3); margin-top: var(--ov-space-4); flex-wrap: wrap;">
+
+    <a class="ov-btn ov-btn--secondary ov-btn--sm ov-btn--icon" href="{{ geo_context.osm_url }}" target="_blank" rel="noopener noreferrer">
+
+      {% ov_icon "external-link" size="sm" %}
+
+      <span>Open in OpenStreetMap</span>
+
+    </a>
+
+    <a class="ov-btn ov-btn--secondary ov-btn--sm ov-btn--icon" href="{{ geo_context.overpass_turbo_url }}" target="_blank" rel="noopener noreferrer">
+
+      {% ov_icon "search" size="sm" %}
+
+      <span>Explore in Overpass Turbo</span>
+
+    </a>
+
+  </div>
+
+  {% if geo_context.landmarks %}
+
+  <div class="ov-table-wrap" style="margin-top: var(--ov-space-5); border: none;">
+
+    <table class="ov-table">
+
+      <thead><tr><th>Name</th><th>Category</th><th>Distance</th></tr></thead>
+
+      <tbody>
+
+        {% for l in geo_context.landmarks %}
+
+        <tr>
+
+          <td>{{ l.name }}</td>
+
+          <td class="ov-caption">{{ l.category }}</td>
+
+          <td class="ov-caption">{{ l.distance_m }} m</td>
+
+        </tr>
+
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+
+  </div>
+
+  {% if geo_context.landmark_count_total > geo_context.landmarks|length %}
+
+  <p class="ov-caption" style="margin-top: var(--ov-space-2);">Showing nearest {{ geo_context.landmarks|length }} of {{ geo_context.landmark_count_total }} named landmarks found — open in Overpass Turbo for the full set.</p>
+
+  {% endif %}
+
+  {% elif geo_context.landmarks_error %}
+
+  <p class="ov-caption" style="margin-top: var(--ov-space-4); color: var(--ov-color-warning);">{{ geo_context.landmarks_error }}</p>
+
+  {% else %}
+
+  <p class="ov-caption" style="margin-top: var(--ov-space-4);">No named landmarks found within range of these coordinates.</p>
+
+  {% endif %}
+
+</div>
+
+{% endif %}
+
 
 
 {% for section_name, section_fields in metadata_sections %}

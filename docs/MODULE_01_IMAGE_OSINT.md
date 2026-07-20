@@ -84,3 +84,30 @@ python manage.py test image_osint
 ## Next module
 
 Module 2 will be **WHOIS & Domain Intelligence** (custom WHOIS socket/parser or your approved API).
+
+## Geolocation context (OpenStreetMap, added)
+
+When EXIF GPS coordinates are present, the report now includes a
+**Geolocation Context** section built from two free, no-API-key OSM
+services:
+
+- **Nominatim** (reverse geocoding) — turns raw lat/lon into a
+  human-readable address.
+- **Overpass API** — the programmatic backend behind Overpass Turbo.
+  Queries for named points of interest within 200m of the coordinates
+  (shops, amenities, landmarks), sorted by distance. This is often more
+  useful for placing a photo than a bare address — "50m from a specific
+  named mosque/school/shop" is more actionable than a street address alone.
+
+A direct **Overpass Turbo** link is also generated (`overpass_turbo.eu`
+with the same query pre-loaded and the map centered on the coordinates)
+so the person can open the interactive tool for manual exploration beyond
+what's shown automatically.
+
+Both services are independent — a failure in one (e.g. Nominatim's rate
+limit) doesn't block the other, matching the graceful-degradation pattern
+used throughout this project. Both respect Nominatim's usage policy
+(identifying `User-Agent`, ~1 req/sec throttle) via `OSM_USER_AGENT` in
+settings.
+
+Files: `image_osint/services/geo_context.py` (`GeoContextClient`).

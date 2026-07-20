@@ -123,6 +123,7 @@ def analysis_detail(request, pk):
             "fingerprint": report.get("fingerprint") or {},
             "reverse_search": report.get("reverse_search") or [],
             "reverse_notice": report.get("reverse_search_notice", ""),
+            "geo_context": report.get("geo_context"),
             "risk_flags": analysis.risk_flags or [],
             "active_module": "image",
         },
