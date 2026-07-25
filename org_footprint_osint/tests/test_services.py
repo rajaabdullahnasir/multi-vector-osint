@@ -8,6 +8,7 @@ from org_footprint_osint.services.http_fingerprint import HttpFingerprintResult
 from org_footprint_osint.services.mail_security import MailSecurityAnalyzer, MailSecurityResult
 from org_footprint_osint.services.org_identity import OrgIdentity, OrgIdentityLookup
 from org_footprint_osint.services.social_presence import SocialPresenceChecker
+from org_footprint_osint.services.tls_inspector import CertificateResult
 
 
 class DomainValidatorTests(SimpleTestCase):
@@ -154,6 +155,10 @@ class OrgFootprintAnalyzerDisplayTests(SimpleTestCase):
         self.analyzer.mail_analyzer = Mock()
         self.analyzer.http_fingerprinter = Mock()
         self.analyzer.social_checker = Mock()
+        self.analyzer.tls_inspector = Mock()
+        self.analyzer.tls_inspector.inspect.return_value = CertificateResult(
+            success=False, error="not tested"
+        )
 
     def test_registry_withholding_data_shows_honest_notice_not_blank_dash(self):
         self.analyzer.identity_lookup.lookup.return_value = OrgIdentity(

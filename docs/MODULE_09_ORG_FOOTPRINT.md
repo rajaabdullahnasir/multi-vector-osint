@@ -84,3 +84,26 @@ templates/org_footprint_osint/
   home.html
   detail.html
 ```
+
+
+## TLS/SSL certificate inspection, added
+
+Connects to the domain's HTTPS port and inspects the actual certificate
+presented — expiry (with days remaining), self-signed detection,
+negotiated TLS protocol version, cipher, and the SAN list. Pure Python
+(stdlib ssl + the cryptography library), no external service, no key.
+
+**A real bug, found via live testing against github.com, worth documenting:**
+the first implementation used ssl.CERT_OPTIONAL intending to inspect
+certificates without blocking on validation failures — but CERT_OPTIONAL
+still enforces chain validation when a cert IS presented, and raises
+CERTIFICATE_VERIFY_FAILED on an untrusted chain. That defeats the entire
+purpose of a tool meant to detect self-signed/untrusted certs. Fixed by
+using ssl.CERT_NONE (true no-verification) and parsing the raw DER bytes
+directly via the cryptography library instead of relying on Python
+ssl's getpeercert() dict form, which is empty under CERT_NONE.
+
+Risk flags: certificate expired, expiring within 30 days, self-signed,
+or an outdated TLS version (TLSv1/TLSv1.1/SSLv2/SSLv3) negotiated.
+
+Files: org_footprint_osint/services/tls_inspector.py (CertificateInspector).

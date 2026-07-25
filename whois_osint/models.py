@@ -22,6 +22,7 @@ class DomainLookup(models.Model):
     expiry_date = models.CharField(max_length=64, blank=True)
     name_server_count = models.PositiveSmallIntegerField(default=0)
     dns_record_count = models.PositiveSmallIntegerField(default=0)
+    zone_transfer_vulnerable = models.BooleanField(default=False)
     status = models.CharField(
         max_length=16,
         choices=Status.choices,

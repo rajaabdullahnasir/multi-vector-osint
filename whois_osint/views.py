@@ -75,6 +75,7 @@ def _execute_lookup(user, domain: str) -> dict:
         expiry_date=registration.get("Registry Expiry Date", "")[:64],
         name_server_count=len(report.name_servers or []),
         dns_record_count=report.dns_records_count,
+        zone_transfer_vulnerable=report.zone_transfer_vulnerable,
         risk_flags=report.risk_flags or [],
         report_json=report.to_storage_dict(),
     )

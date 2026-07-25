@@ -51,3 +51,20 @@ python manage.py test whois_osint
 ## Next module
 
 Module 3 — **Subdomain Finder** — see [MODULE_03_SUBDOMAIN.md](MODULE_03_SUBDOMAIN.md).
+
+## DNS zone transfer (AXFR) test, added
+
+For each nameserver returned by WHOIS, checks whether it will hand over
+the full DNS zone to an unauthenticated request (AXFR) — a serious,
+well-known misconfiguration (properly configured nameservers only allow
+AXFR to specific authorized secondaries). Standard technique used by
+tools like dnsrecon/fierce; this is just a normal DNS protocol query,
+nothing more invasive than any other DNS lookup this module already does.
+
+If any nameserver is vulnerable, the leaked record count and a sample of
+disclosed hostnames are shown, plus a CRITICAL risk flag — a real zone
+transfer commonly reveals internal hostnames/IPs not otherwise
+discoverable. If all nameservers correctly refuse, the report says so
+plainly rather than silently omitting the check.
+
+Files: whois_osint/services/zone_transfer.py (ZoneTransferTester).

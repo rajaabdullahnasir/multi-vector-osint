@@ -11,6 +11,7 @@ from .dns_resolver import DnsResolver
 from .domain_validator import DomainValidator
 from .whois_client import WhoisClient
 from .whois_parser import WhoisParser
+from .zone_transfer import ZoneTransferTester
 
 
 @dataclass
@@ -24,6 +25,7 @@ class DomainIntelReport:
     sections: dict[str, Any] | None = None
     name_servers: list[str] | None = None
     dns_records_count: int = 0
+    zone_transfer_vulnerable: bool = False
     risk_flags: list[str] | None = None
 
     def to_storage_dict(self) -> dict[str, Any]:
@@ -37,6 +39,7 @@ class DomainIntelReport:
             "sections": self.sections,
             "name_servers": self.name_servers,
             "dns_records_count": self.dns_records_count,
+            "zone_transfer_vulnerable": self.zone_transfer_vulnerable,
             "risk_flags": self.risk_flags,
         }
 
@@ -47,6 +50,7 @@ class DomainIntelAnalyzer:
         self.whois_client = WhoisClient()
         self.whois_parser = WhoisParser()
         self.dns_resolver = DnsResolver()
+        self.zone_transfer_tester = ZoneTransferTester()
 
     def analyze(self, domain_input: str) -> DomainIntelReport:
         validation = self.validator.validate(domain_input)
@@ -93,7 +97,27 @@ class DomainIntelAnalyzer:
         elif dns_result.error:
             sections["DNS"] = {"Warning": dns_result.error}
 
-        risk_flags = self._derive_risk_flags(parsed, dns_result)
+        zt_result = self.zone_transfer_tester.test(domain, parsed.name_servers)
+        if zt_result.success:
+            if zt_result.any_vulnerable:
+                sections["DNS Zone Transfer (AXFR)"] = {
+                    "Status": "VULNERABLE — full zone transfer succeeded",
+                    "Affected nameserver(s)": ", ".join(zt_result.vulnerable_nameservers),
+                }
+                for attempt in zt_result.attempts:
+                    if attempt.vulnerable:
+                        sections["DNS Zone Transfer (AXFR)"][f"{attempt.nameserver} — records leaked"] = (
+                            f"{attempt.record_count} total, e.g. "
+                            + ", ".join(attempt.sample_records)
+                        )
+            else:
+                sections["DNS Zone Transfer (AXFR)"] = {
+                    "Status": "Not vulnerable — all nameservers correctly refused transfer.",
+                }
+        else:
+            sections["DNS Zone Transfer (AXFR)"] = {"Notice": zt_result.error or "Could not test."}
+
+        risk_flags = self._derive_risk_flags(parsed, dns_result, zt_result)
 
         return DomainIntelReport(
             success=True,
@@ -103,6 +127,7 @@ class DomainIntelAnalyzer:
             sections=sections,
             name_servers=parsed.name_servers,
             dns_records_count=len(dns_result.records) if dns_result.success else 0,
+            zone_transfer_vulnerable=zt_result.any_vulnerable,
             risk_flags=risk_flags,
         )
 
@@ -115,8 +140,16 @@ class DomainIntelAnalyzer:
             parts.append(f"TTL {row['TTL']}")
         return " · ".join(p for p in parts if p)
 
-    def _derive_risk_flags(self, parsed, dns_result) -> list[str]:
+    def _derive_risk_flags(self, parsed, dns_result, zt_result=None) -> list[str]:
         flags: list[str] = []
+        if zt_result and zt_result.success and zt_result.any_vulnerable:
+            flags.append(
+                f"CRITICAL: DNS zone transfer (AXFR) succeeded on "
+                f"{', '.join(zt_result.vulnerable_nameservers)} — the entire DNS zone "
+                "was disclosed to an unauthenticated request. This commonly reveals "
+                "internal hostnames, IPs, and infrastructure not otherwise discoverable. "
+                "Fix immediately by restricting AXFR to authorized secondary servers only."
+            )
         flat = parsed.flat
         expiry = flat.get("Registry Expiry Date", "")
         if expiry:

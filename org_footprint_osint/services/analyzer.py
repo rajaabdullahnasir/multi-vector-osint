@@ -18,6 +18,7 @@ from .http_fingerprint import HttpFingerprinter
 from .mail_security import MailSecurityAnalyzer
 from .org_identity import OrgIdentityLookup
 from .social_presence import SocialPresenceChecker
+from .tls_inspector import CertificateInspector
 
 
 @dataclass
@@ -35,6 +36,7 @@ class OrgFootprintReport:
     dkim_selector_count: int = 0
     security_header_score: int = 0
     social_platform_count: int = 0
+    tls_days_remaining: int | None = None
     risk_flags: list[str] | None = None
 
     def to_storage_dict(self) -> dict[str, Any]:
@@ -55,6 +57,7 @@ class OrgFootprintAnalyzer:
         self.mail_analyzer = MailSecurityAnalyzer()
         self.http_fingerprinter = HttpFingerprinter()
         self.social_checker = SocialPresenceChecker()
+        self.tls_inspector = CertificateInspector()
 
     def analyze(self, domain_input: str) -> OrgFootprintReport:
         validation = self.validator.validate(domain_input)
@@ -121,6 +124,24 @@ class OrgFootprintAnalyzer:
         else:
             sections["HTTP Fingerprint"] = {"Notice": http_result.error or "No response."}
 
+        tls_result = self.tls_inspector.inspect(domain)
+        if tls_result.success:
+            sections["TLS/SSL Certificate"] = {
+                "Subject": tls_result.subject_cn or "—",
+                "Issuer": tls_result.issuer_cn or "—",
+                "Valid until": tls_result.not_after or "—",
+                "Days until expiry": (
+                    str(tls_result.days_until_expiry)
+                    if tls_result.days_until_expiry is not None else "—"
+                ),
+                "Self-signed": "Yes" if tls_result.is_self_signed else "No",
+                "TLS version": tls_result.tls_version or "—",
+                "Cipher": tls_result.cipher or "—",
+                "SAN count": str(len(tls_result.san_list)),
+            }
+        else:
+            sections["TLS/SSL Certificate"] = {"Notice": tls_result.error or "Could not inspect certificate."}
+
         social = self.social_checker.check(domain)
         sections["Official Platform Presence"] = {
             check.platform: (
@@ -138,7 +159,7 @@ class OrgFootprintAnalyzer:
             "this does not confirm organizational ownership"
         )
 
-        risk_flags = self._derive_risk_flags(identity, mail, http_result)
+        risk_flags = self._derive_risk_flags(identity, mail, http_result, tls_result)
 
         return OrgFootprintReport(
             success=True,
@@ -154,11 +175,27 @@ class OrgFootprintAnalyzer:
                 len(http_result.security_headers_present) if http_result.success else 0
             ),
             social_platform_count=social.found_count,
+            tls_days_remaining=tls_result.days_until_expiry if tls_result.success else None,
             risk_flags=risk_flags,
         )
 
-    def _derive_risk_flags(self, identity, mail, http_result) -> list[str]:
+    def _derive_risk_flags(self, identity, mail, http_result, tls_result=None) -> list[str]:
         flags: list[str] = []
+        if tls_result and tls_result.success:
+            if tls_result.is_expired:
+                flags.append("TLS certificate has EXPIRED — browsers will show security warnings.")
+            elif tls_result.days_until_expiry is not None and tls_result.days_until_expiry < 30:
+                flags.append(
+                    f"TLS certificate expires in {tls_result.days_until_expiry} day(s) — renew soon."
+                )
+            if tls_result.is_self_signed:
+                flags.append(
+                    "TLS certificate is self-signed — not trusted by browsers/clients by default."
+                )
+            if tls_result.tls_version and tls_result.tls_version in ("TLSv1", "TLSv1.1", "SSLv2", "SSLv3"):
+                flags.append(
+                    f"Server negotiated {tls_result.tls_version} — an outdated, deprecated TLS version."
+                )
 
         if not mail.spf_present:
             flags.append("No SPF record found — domain is more exposed to email spoofing.")

@@ -24,6 +24,7 @@ class OrgFootprint(models.Model):
     dmarc_status = models.CharField(max_length=16, blank=True)  # none / quarantine / reject / missing
     dkim_selector_count = models.PositiveSmallIntegerField(default=0)
     security_header_score = models.PositiveSmallIntegerField(default=0)  # out of 4
+    tls_days_remaining = models.IntegerField(null=True, blank=True)
     social_platform_count = models.PositiveSmallIntegerField(default=0)
     status = models.CharField(
         max_length=16,

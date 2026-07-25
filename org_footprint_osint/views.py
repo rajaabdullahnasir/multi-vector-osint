@@ -67,6 +67,7 @@ def _execute_scan(user, domain: str) -> dict:
         dmarc_status=report.dmarc_status,
         dkim_selector_count=report.dkim_selector_count,
         security_header_score=report.security_header_score,
+        tls_days_remaining=report.tls_days_remaining,
         social_platform_count=report.social_platform_count,
         risk_flags=report.risk_flags or [],
         report_json=report.to_storage_dict(),
